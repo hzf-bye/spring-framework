@@ -215,9 +215,9 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		else if (delegate.nodeNameEquals(ele, BEAN_ELEMENT)) {
 			processBeanDefinition(ele, delegate);
 		}
-		//对beans标签的处理
+		//对beans标签的处理,递归
 		else if (delegate.nodeNameEquals(ele, NESTED_BEANS_ELEMENT)) {
-			// resource
+			// recurse
 			doRegisterBeanDefinitions(ele);
 		}
 	}
