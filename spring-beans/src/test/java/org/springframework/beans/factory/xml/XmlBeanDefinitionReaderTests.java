@@ -130,14 +130,23 @@ public class XmlBeanDefinitionReaderTests {
 
 	@Test
 	public void xsdValidationAutodetect() {
-		doTestValidation("validateWithXsd.xml");
+		doTestValidationV2("validateWithXsd.xml");
 	}
 
 	private void doTestValidation(String resourceName) {
 		DefaultListableBeanFactory factory = new DefaultListableBeanFactory();
 		Resource resource = new ClassPathResource(resourceName, getClass());
-		new XmlBeanDefinitionReader(factory).loadBeanDefinitions(resource);
+		XmlBeanDefinitionReader xmlBeanDefinitionReader = new XmlBeanDefinitionReader(factory);
+//		xmlBeanDefinitionReader.setValidationMode(XmlValidationModeDetector.VALIDATION_XSD);
+		xmlBeanDefinitionReader.loadBeanDefinitions(resource);
 		TestBean bean = (TestBean) factory.getBean("testBean");
+		assertThat(bean).isNotNull();
+	}
+
+	private void doTestValidationV2(String resourceName) {
+		Resource resource = new ClassPathResource(resourceName, getClass());
+		XmlBeanFactory xmlBeanFactory = new XmlBeanFactory(resource);
+		TestBean bean = (TestBean) xmlBeanFactory.getBean("testBean");
 		assertThat(bean).isNotNull();
 	}
 

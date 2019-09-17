@@ -912,6 +912,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		if (beanDefinition instanceof AbstractBeanDefinition) {
 			try {
+				/*
+				 * 注册前的最后一次校验，这里的校验不同于之前的XML文件校验，
+				 * 主要是对于AbstractBeanDefinition属性中分methodOverrides校验，
+				 * 校验methodOverrides是否与工厂方法并存后者methodOverrides对应的方法根本不存在
+				 */
 				((AbstractBeanDefinition) beanDefinition).validate();
 			}
 			catch (BeanDefinitionValidationException ex) {
@@ -922,9 +927,12 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		BeanDefinition existingDefinition = this.beanDefinitionMap.get(beanName);
 		if (existingDefinition != null) {
+			//处理已经存在的bean
+			//如果对应的bean已经注册且在配置中配置了bean不允许被覆盖，抛异常
 			if (!isAllowBeanDefinitionOverriding()) {
 				throw new BeanDefinitionOverrideException(beanName, beanDefinition, existingDefinition);
 			}
+			//判断role打印日志  role在AbstractBeanDefinition中有解释
 			else if (existingDefinition.getRole() < beanDefinition.getRole()) {
 				// e.g. was ROLE_APPLICATION, now overriding with ROLE_SUPPORT or ROLE_INFRASTRUCTURE
 				if (logger.isInfoEnabled()) {
@@ -933,6 +941,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							existingDefinition + "] with [" + beanDefinition + "]");
 				}
 			}
+			//不相等 打印日志
 			else if (!beanDefinition.equals(existingDefinition)) {
 				if (logger.isDebugEnabled()) {
 					logger.debug("Overriding bean definition for bean '" + beanName +
@@ -947,29 +956,40 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							"] with [" + beanDefinition + "]");
 				}
 			}
+			//来这儿，说明允许被覆盖，那么覆盖原有的bean
 			this.beanDefinitionMap.put(beanName, beanDefinition);
 		}
 		else {
+			//处理之前不存在的bean
+			//检测创建bean阶段是否已经开启，如果开启了需要并发控制
 			if (hasBeanCreationStarted()) {
 				// Cannot modify startup-time collection elements anymore (for stable iteration)
+				//beanDefinitionMap为全局变量，避免对其并发操作
 				synchronized (this.beanDefinitionMap) {
+					//添加beanDefinition至beanDefinitionMap中
 					this.beanDefinitionMap.put(beanName, beanDefinition);
 					List<String> updatedDefinitions = new ArrayList<>(this.beanDefinitionNames.size() + 1);
 					updatedDefinitions.addAll(this.beanDefinitionNames);
 					updatedDefinitions.add(beanName);
+					//添加beanName至beanDefinitionNames中
 					this.beanDefinitionNames = updatedDefinitions;
+					//从manualSingletonNames中移除beanName
 					removeManualSingletonName(beanName);
 				}
 			}
 			else {
 				// Still in startup registration phase
+				//添加beanDefinition至beanDefinitionMap中
 				this.beanDefinitionMap.put(beanName, beanDefinition);
+				//添加beanName至beanDefinitionNames中
 				this.beanDefinitionNames.add(beanName);
+				//从manualSingletonNames中移除beanName
 				removeManualSingletonName(beanName);
 			}
 			this.frozenBeanDefinitionNames = null;
 		}
 
+		//重新设置对应的缓存
 		if (existingDefinition != null || containsSingleton(beanName)) {
 			resetBeanDefinition(beanName);
 		}

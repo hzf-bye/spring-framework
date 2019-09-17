@@ -80,6 +80,7 @@ public class XmlValidationModeDetector {
 
 
 	/**
+	 * spring用来检查验证模式的办法就是是否包含DOCTYPE，包含就是DTD,否则是XSD
 	 * Detect the validation mode for the XML document in the supplied {@link InputStream}.
 	 * Note that the supplied {@link InputStream} is closed by this method before returning.
 	 * @param inputStream the InputStream to parse
@@ -95,23 +96,43 @@ public class XmlValidationModeDetector {
 			String content;
 			while ((content = reader.readLine()) != null) {
 				content = consumeCommentTokens(content);
+				//如果读取的行是空行或者是注释则略过
 				if (this.inComment || !StringUtils.hasText(content)) {
 					continue;
 				}
+				//判断是否是DTD验证模式，如果content中包含DOCTYPE那么就是DTD验证模式
+				//isDtdValidated社会为true,结束循环
 				if (hasDoctype(content)) {
 					isDtdValidated = true;
 					break;
 				}
+				//读取到<开始符号，且<符号后面是字母返回true
+				// DTD验证模式一定会在开始符号之前,下面是DTD验证模式
+				/*
+				 * <?xml version="1.0" encoding="UTF-8"?>
+				 * <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+				 */
+				/* XSD模式
+				 * <beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+				 *        xmlns="http://www.springframework.org/schema/beans"
+				 *        xsi:schemaLocation="
+				 *            http://www.springframework.org/schema/beans   http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+				 * "
+				 *        default-autowire="byName">
+				 */
+				//所以读取到<beans时候下面会返回true，说明之前还没有读取到DOCTYPE字符串，那么就说明是xsd验证模式
 				if (hasOpeningTag(content)) {
 					// End of meaningful data...
 					break;
 				}
 			}
+			//105行结束那么isDtdValidated为true,DTD验证模式否则XSD验证模式
 			return (isDtdValidated ? VALIDATION_DTD : VALIDATION_XSD);
 		}
 		catch (CharConversionException ex) {
 			// Choked on some character encoding...
 			// Leave the decision up to the caller.
+			//报错则这设置为Auto
 			return VALIDATION_AUTO;
 		}
 		finally {
