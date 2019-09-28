@@ -39,7 +39,8 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
  * @author Juergen Hoeller
  * @author Sam Brannen
  */
-public class XmlBeanDefinitionReaderTests {
+public class
+XmlBeanDefinitionReaderTests {
 
 	@Test
 	public void setParserClassSunnyDay() {

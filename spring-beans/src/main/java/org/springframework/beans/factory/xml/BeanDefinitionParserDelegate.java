@@ -1585,7 +1585,7 @@ public class BeanDefinitionParserDelegate {
 		String namespaceUri = getNamespaceURI(node);
 		//对于非默认标签进行装饰
 		if (namespaceUri != null && !isDefaultNamespace(namespaceUri)) {
-			//根据明明空间找到对应的处理器
+			//根据命名空间找到对应的处理器
 			NamespaceHandler handler = this.readerContext.getNamespaceHandlerResolver().resolve(namespaceUri);
 			if (handler != null) {
 				//进行修饰

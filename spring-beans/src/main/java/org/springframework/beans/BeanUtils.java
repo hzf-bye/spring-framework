@@ -71,7 +71,7 @@ public abstract class BeanUtils {
 	private static final Set<Class<?>> unknownEditorTypes =
 			Collections.newSetFromMap(new ConcurrentReferenceHashMap<>(64));
 
-	private static final Map<Class<?>, Object> DEFAULT_TYPE_VALUES;
+	private static final Map<Class<?>, Object> /**/DEFAULT_TYPE_VALUES;
 
 	static {
 		Map<Class<?>, Object> values = new HashMap<>();
@@ -180,8 +180,10 @@ public abstract class BeanUtils {
 	public static <T> T instantiateClass(Constructor<T> ctor, Object... args) throws BeanInstantiationException {
 		Assert.notNull(ctor, "Constructor must not be null");
 		try {
+			// 设置构造方法，可访问
 			ReflectionUtils.makeAccessible(ctor);
 			if (KotlinDetector.isKotlinReflectPresent() && KotlinDetector.isKotlinType(ctor.getDeclaringClass())) {
+				// 使用构造方法，创建对象
 				return KotlinDelegate.instantiateClass(ctor, args);
 			}
 			else {
@@ -191,15 +193,18 @@ public abstract class BeanUtils {
 				for (int i = 0 ; i < args.length; i++) {
 					if (args[i] == null) {
 						Class<?> parameterType = parameterTypes[i];
+						//如果构造方法参数为空，且参数类型为基本类型(byte,boolean int 等)则舍得对应的默认值
 						argsWithDefaultValues[i] = (parameterType.isPrimitive() ? DEFAULT_TYPE_VALUES.get(parameterType) : null);
 					}
 					else {
 						argsWithDefaultValues[i] = args[i];
 					}
 				}
+				//反射创建对象
 				return ctor.newInstance(argsWithDefaultValues);
 			}
 		}
+		// 各种异常的翻译，最终统一抛出 BeanInstantiationException 异常
 		catch (InstantiationException ex) {
 			throw new BeanInstantiationException(ctor, "Is it an abstract class?", ex);
 		}

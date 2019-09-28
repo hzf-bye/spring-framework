@@ -61,6 +61,7 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	private AnnotatedElement qualifiedElement;
 
 	/** Determines if the definition needs to be re-merged. */
+	//标识是否需要重新转换为RootBeanDefinition，true标识需要
 	volatile boolean stale;
 
 	boolean allowCaching = true;
@@ -70,7 +71,9 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	@Nullable
 	volatile ResolvableType targetType;
 
-	/** Package-visible field for caching the determined Class of a given bean definition. */
+	/** Package-visible field for caching the determined Class of a given bean definition.
+	 * 缓存bean的Class类型
+	 * */
 	@Nullable
 	volatile Class<?> resolvedTargetType;
 
@@ -82,25 +85,38 @@ public class RootBeanDefinition extends AbstractBeanDefinition {
 	@Nullable
 	volatile ResolvableType factoryMethodReturnType;
 
-	/** Package-visible field for caching a unique factory method candidate for introspection. */
+	/** Package-visible field for caching a unique factory method candidate for introspection.
+	 * 缓存缓存唯一的工厂方法
+	 * */
+
 	@Nullable
 	volatile Method factoryMethodToIntrospect;
 
 	/** Common lock for the four constructor fields below. */
 	final Object constructorArgumentLock = new Object();
 
-	/** Package-visible field for caching the resolved constructor or factory method. */
+	/** Package-visible field for caching the resolved constructor or factory method.
+	 * //缓存的构造函数或者工厂方法
+	 * */
 	@Nullable
 	Executable resolvedConstructorOrFactoryMethod;
 
-	/** Package-visible field that marks the constructor arguments as resolved. */
+	/** Package-visible field that marks the constructor arguments as resolved.
+	 * //构造函数的参数是否已确定
+	 * */
 	boolean constructorArgumentsResolved = false;
 
-	/** Package-visible field for caching fully resolved constructor arguments. */
+	/** Package-visible field for caching fully resolved constructor arguments.
+	 * 构造函数的参数，constructorArgumentsResolved为true时，
+	 * resolvedConstructorArguments与preparedConstructorArguments二者其一有值
+	 * */
 	@Nullable
 	Object[] resolvedConstructorArguments;
 
-	/** Package-visible field for caching partly prepared constructor arguments. */
+	/** Package-visible field for caching partly prepared constructor arguments.
+	 *  构造函数的参数，constructorArgumentsResolved为true时，
+	 *  resolvedConstructorArguments与preparedConstructorArguments二者其一有值
+	 * */
 	@Nullable
 	Object[] preparedConstructorArguments;
 
