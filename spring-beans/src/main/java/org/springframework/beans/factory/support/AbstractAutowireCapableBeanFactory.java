@@ -168,7 +168,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		/*
 		 * 忽略给定接口的自动装备功能,
 		 * 例如：A依赖B但是spring在获取A的时候发现B没初始化，那么会触发B的初始化，
-		 * 但是若B实现了BeanNameAware接口，则不会被初始化
+		 * 但是若A实现了BeanNameAware接口，则不会被初始化
 		 *
 		 * 通过其他方式解析application上下文注册依赖
 		 * 类似于ApplicationContext通过ApplicationContextAware进行注入

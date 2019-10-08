@@ -48,6 +48,17 @@ import org.springframework.util.Assert;
  * @see #getResource
  * @see #getResourceByPath
  * @see GenericApplicationContext
+ *
+ * ClassPathXmlApplicationContext涉及到的接口信息
+ * BeanFactory：Spring 容器 Bean 的管理
+ * MessageSource：管理 message ，实现国际化等功能
+ * ApplicationEventPublisher：事件发布
+ * ResourcePatternResolver：资源加载
+ * EnvironmentCapable：系统 Environment（profile + Properties） 相关
+ * Lifecycle：管理生命周期
+ * Closable：关闭，释放资源
+ * InitializingBean：自定义初始化
+ * BeanNameAware：设置 beanName 的 Aware 接口
  */
 public class ClassPathXmlApplicationContext extends AbstractXmlApplicationContext {
 

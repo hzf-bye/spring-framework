@@ -1886,8 +1886,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		//如果是 FactoryBean，我们则创建该 Bean，除非调用者实际上想要引用工厂（FactoryBean）。
 		/*
 		 * 1.如果当前bean不是FactoryBean类型那么直接返回改bean
-		 * 2.如果改bean是FactoryBean类型，那么看name是不是&开头，如果是那么说明就是要获取FactoryBean类型的示例直接返回
-		 * 		否则继续往下，根据 FactoryBean获取到对应的bean
+		 * 2.如果改bean是FactoryBean类型，那么看name是不是&开头，
+		 * 如果是&开头那么说明就是要获取FactoryBean类型的示例直接返回
+		 * 	否则继续往下，根据 FactoryBean获取到对应的bean
 		 */
 		if (!(beanInstance instanceof FactoryBean) || BeanFactoryUtils.isFactoryDereference(name)) {
 			return beanInstance;

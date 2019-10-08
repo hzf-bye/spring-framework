@@ -122,15 +122,22 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	 */
 	@Override
 	protected final void refreshBeanFactory() throws BeansException {
+		// 若已有 BeanFactory ，销毁它的 Bean 们，并销毁 BeanFactory
 		if (hasBeanFactory()) {
 			destroyBeans();
 			closeBeanFactory();
 		}
 		try {
+			//创建DefaultListableBeanFactory
 			DefaultListableBeanFactory beanFactory = createBeanFactory();
+			// 为了序列化指定id，如果需要的话，让这个BeanFactory从id反序列化到BeanFactory对象
 			beanFactory.setSerializationId(getId());
+			// 定制 BeanFactory 设置相关属性，包括是否允许覆盖同名称的不同定义的对象以及循环依赖以及
+			//设定@Autowired和@Qualifier注解解析器QualifierAnnotationAutowireCandidateResolver
 			customizeBeanFactory(beanFactory);
+			//初始化DocumentReader，并进行XML文件读取以及解析
 			loadBeanDefinitions(beanFactory);
+			// 设置 Context 的 BeanFactory
 			synchronized (this.beanFactoryMonitor) {
 				this.beanFactory = beanFactory;
 			}
@@ -222,12 +229,26 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	 * @see DefaultListableBeanFactory#setAllowEagerClassLoading
 	 */
 	protected void customizeBeanFactory(DefaultListableBeanFactory beanFactory) {
+		//如果属性allowBeanDefinitionOverriding不为空，设置给beanFactory
+		//此属性含义：是否覆盖同名称的不同定义的对象
 		if (this.allowBeanDefinitionOverriding != null) {
 			beanFactory.setAllowBeanDefinitionOverriding(this.allowBeanDefinitionOverriding);
 		}
+		//如果属性allowCircularReferences不为空，设置给beanFactory
+		//此属性含义：是否允许bean之间存在循环依赖
 		if (this.allowCircularReferences != null) {
 			beanFactory.setAllowCircularReferences(this.allowCircularReferences);
 		}
+
+		/*
+		 * 上面只要是不为空才赋值，那么在哪里赋值呢？我们可以在子类中覆盖customizeBeanFactory方法进行赋值
+		 * protected void customizeBeanFactory(DefaultListableBeanFactory beanFactory) {
+		 *
+		 *     super.setAllowBeanDefinitionOverriding(false);
+		 *     super.setAllowCircularReferences(false);
+		 *     super.customizeBeanFactory(beanFactory);
+		 * }
+		 */
 	}
 
 	/**

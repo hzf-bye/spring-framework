@@ -273,7 +273,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				 * 所以两种循环依赖核心区别就是，
 				 * 构造器循环依赖是在创建bean时必须先行创建依赖的bean，所以就会出现A需要B,B需要A的情况，类似死锁，因此spring只能报错
 				 * 而set方法循环依赖的话，spring在创建好对象之后，先将自己暴露出来，放入singletonFactories中，然后在去注入自己需要的bean，
-				 * 因此别人可以从缓存中获取到自己，自己也可以从缓冲取到需要注入的bean，而且在将自己暴露在singletonFactories中，与从缓存中取数据，
+				 * 因此别人可以从缓存中获取到自己，自己也可以从缓存中取到需要注入的bean，而且在将自己暴露在singletonFactories中，与从缓存中取数据，
 				 * 以及在创建bean都是锁住同一个对象(singletonObjects)的，这样就解决了循环依赖。
 				 *
 				 */
