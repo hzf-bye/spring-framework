@@ -621,7 +621,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 						"' to allow for resolving potential circular references");
 			}
 			// 为避免后续的循环依赖，可以在bean初始化完成前将创建实例的ObjectFactory加入工厂
-			//lambda表达式匿名类，如果没有AOP，那么singletonFactory.getObject返回的就是此bean，
+			// lambda表达式匿名类，如果没有AOP，那么singletonFactory.getObject返回的就是此bean，
 			// 因此如果有循环依赖那么从缓存中获取到的singletonFactory中的bean与当前bean是一样的 因此解决了循环依赖
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
@@ -1314,7 +1314,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// No special handling: simply use no-arg constructor.
 		// <4.3> 使用默认的构造函数
-		// 若配置文件中美指定配置文件参数则来这儿 使用默认的无参数构造函数
+		// 若配置文件中没指定配置文件参数则来这儿 使用默认的无参数构造函数
 		return instantiateBean(beanName, mbd);
 	}
 

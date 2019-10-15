@@ -80,6 +80,13 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 	 * @return the list of {@link org.springframework.aop.Advisor} beans
 	 * @see #isEligibleBean
 	 */
+	/**
+	 * 1.获取所有的beanName，这一步骤中所有的beanFactory中注册的bean都会被提取出来
+	 * 2.遍历所有beanName，并找出声明AspectJ的注解(@Aspect)的类，进行进一步的处理。
+	 * 3.对标记为AspectJ的注解的类进行增强的提取。
+	 * 4.将提取的结果加入缓存
+	 *
+	 */
 	public List<Advisor> buildAspectJAdvisors() {
 		List<String> aspectNames = this.aspectBeanNames;
 
@@ -89,41 +96,60 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 				if (aspectNames == null) {
 					List<Advisor> advisors = new ArrayList<>();
 					aspectNames = new ArrayList<>();
+					//获取所有的beanName
 					String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 							this.beanFactory, Object.class, true, false);
+					//循环所有的beanName，找出对应的增强的方法
 					for (String beanName : beanNames) {
+						//不合法的bean则略过，由子类定义规则，默认返回true
 						if (!isEligibleBean(beanName)) {
 							continue;
 						}
 						// We must be careful not to instantiate beans eagerly as in this case they
 						// would be cached by the Spring container but would not have been weaved.
+						// 获取对应的bean的类型
 						Class<?> beanType = this.beanFactory.getType(beanName);
 						if (beanType == null) {
 							continue;
 						}
+						//如果存在@Aspect注解
 						if (this.advisorFactory.isAspect(beanType)) {
 							aspectNames.add(beanName);
+							// 对于使用了@Aspect注解标注的bean，将其封装为一个AspectMetadata类型。
+							// 这里在封装的过程中会解析@Aspect注解上的参数指定的切面类型，如perthis
+							// 和pertarget等。这些被解析的注解都会被封装到其perClausePointcut属性中
 							AspectMetadata amd = new AspectMetadata(beanType, beanName);
+							// 判断@Aspect注解中标注的是否为singleton类型，默认的切面类都是singleton类型
 							if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
+								// 将BeanFactory和当前bean封装为MetadataAwareAspectInstanceFactory对象，
+								// 这里会再次将@Aspect注解中的参数都封装
+								// 为一个AspectMetadata，并且保存在该factory中
 								MetadataAwareAspectInstanceFactory factory =
 										new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
+								//解析标记AspectJ注解的增强方法
 								List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
 								if (this.beanFactory.isSingleton(beanName)) {
+									//如果是单例，该bean以及对应的增强方法缓存在advisorsCache中
 									this.advisorsCache.put(beanName, classAdvisors);
 								}
 								else {
+									//将当前的factory进行缓存，以便再次获取时可以通过factory直接获取
 									this.aspectFactoryCache.put(beanName, factory);
 								}
 								advisors.addAll(classAdvisors);
 							}
 							else {
 								// Per target or per this.
+								// 如果@Aspect注解标注的是perthis和pertarget等类型，说明当前切面
+								// 不可能是单例的，因而这里判断其如果是单例的则抛出异常
 								if (this.beanFactory.isSingleton(beanName)) {
 									throw new IllegalArgumentException("Bean with name '" + beanName +
 											"' is a singleton, but aspect instantiation model is not singleton");
 								}
+								// 将当前BeanFactory和切面bean封装为一个多例类型的Factory
 								MetadataAwareAspectInstanceFactory factory =
 										new PrototypeAspectInstanceFactory(this.beanFactory, beanName);
+								// 对当前bean和factory进行缓存
 								this.aspectFactoryCache.put(beanName, factory);
 								advisors.addAll(this.advisorFactory.getAdvisors(factory));
 							}
@@ -138,13 +164,18 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 		if (aspectNames.isEmpty()) {
 			return Collections.emptyList();
 		}
+
+		// 通过所有的aspectNames在缓存中获取切面对应的Advisor，这里如果是单例的，则直接从advisorsCache
+		// 获取，如果是多例类型的，则通过MetadataAwareAspectInstanceFactory立即生成一个
 		List<Advisor> advisors = new ArrayList<>();
 		for (String aspectName : aspectNames) {
 			List<Advisor> cachedAdvisors = this.advisorsCache.get(aspectName);
+			// 如果是单例的Advisor bean，则直接添加到返回值列表中
 			if (cachedAdvisors != null) {
 				advisors.addAll(cachedAdvisors);
 			}
 			else {
+				// 如果是多例的Advisor bean，则通过MetadataAwareAspectInstanceFactory生成
 				MetadataAwareAspectInstanceFactory factory = this.aspectFactoryCache.get(aspectName);
 				advisors.addAll(this.advisorFactory.getAdvisors(factory));
 			}

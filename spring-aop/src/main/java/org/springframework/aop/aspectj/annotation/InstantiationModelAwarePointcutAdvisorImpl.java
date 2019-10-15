@@ -70,6 +70,10 @@ final class InstantiationModelAwarePointcutAdvisorImpl
 
 	private final boolean lazy;
 
+	/**
+	 * 对应的增强器
+	 * AspectJMethodBeforeAdvice、AspectJAfterAdvice等
+	 */
 	@Nullable
 	private Advice instantiatedAdvice;
 
@@ -110,6 +114,7 @@ final class InstantiationModelAwarePointcutAdvisorImpl
 			// A singleton aspect.
 			this.pointcut = this.declaredPointcut;
 			this.lazy = false;
+			//根据注解信息初始化对应的增强器
 			this.instantiatedAdvice = instantiateAdvice(this.declaredPointcut);
 		}
 	}

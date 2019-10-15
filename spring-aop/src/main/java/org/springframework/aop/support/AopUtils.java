@@ -220,32 +220,53 @@ public abstract class AopUtils {
 	 * @param hasIntroductions whether or not the advisor chain
 	 * for this bean includes any introductions
 	 * @return whether the pointcut can apply on any method
+	 * 逻辑主要分为两个部分：通过ClassFilter对类进行过滤和通过MethodMatcher对方法进行过滤。
+	 * 这里的ClassFilter其实主要指的是@Aspect注解中使用的切点表达式，
+	 * 而MethodMatcher主要指的是@Before，@After等注解中使用的切点表达式。
+	 * Spring Aop对切点表达式进行解析的过程都是通过递归来实现的，两种解析方式是类似的。
 	 */
 	public static boolean canApply(Pointcut pc, Class<?> targetClass, boolean hasIntroductions) {
 		Assert.notNull(pc, "Pointcut must not be null");
+		// 获取当前Advisor的CalssFilter，并且调用其matches()方法判断当前切点表达式是否与目标bean匹配，
+		// 这里ClassFilter指代的切点表达式主要是当前切面类上使用的@Aspect注解中所指代的切点表达式
 		if (!pc.getClassFilter().matches(targetClass)) {
 			return false;
 		}
 
+		// 判断如果当前Advisor所指代的方法的切点表达式如果是对任意方法都放行，则直接返回
 		MethodMatcher methodMatcher = pc.getMethodMatcher();
 		if (methodMatcher == MethodMatcher.TRUE) {
 			// No need to iterate the methods if we're matching any method anyway...
 			return true;
 		}
 
+		// 这里将MethodMatcher强转为IntroductionAwareMethodMatcher类型的原因在于，
+		// 如果目标类不包含Introduction类型的Advisor，那么使用
+		// IntroductionAwareMethodMatcher.matches()方法进行匹配判断时可以提升匹配的效率，
+		// 其会判断目标bean中没有使用Introduction织入新的方法，则可以使用该方法进行静态匹配，从而提升效率
+		// 因为Introduction类型的Advisor可以往目标类中织入新的方法，新的方法也可能是被AOP环绕的方法
 		IntroductionAwareMethodMatcher introductionAwareMethodMatcher = null;
 		if (methodMatcher instanceof IntroductionAwareMethodMatcher) {
 			introductionAwareMethodMatcher = (IntroductionAwareMethodMatcher) methodMatcher;
 		}
 
 		Set<Class<?>> classes = new LinkedHashSet<>();
+		//当前类不是代理类
 		if (!Proxy.isProxyClass(targetClass)) {
 			classes.add(ClassUtils.getUserClass(targetClass));
 		}
+		/*
+		 * 1. 获取clazz实现的接口以及父类实现的接口，
+		 * 2. 如果targetClass是接口那么返回本身
+		 * 3. 如果targetClass有父类，则重复1 2 3步骤
+		 */
 		classes.addAll(ClassUtils.getAllInterfacesForClassAsSet(targetClass));
 
 		for (Class<?> clazz : classes) {
+			// 获取目标接口的所有方法
 			Method[] methods = ReflectionUtils.getAllDeclaredMethods(clazz);
+			// 如果当前MethodMatcher也是IntroductionAwareMethodMatcher类型，则使用该类型
+			// 的方法进行匹配，从而达到提升效率的目的；否则使用MethodMatcher.matches()方法进行匹配
 			for (Method method : methods) {
 				if (introductionAwareMethodMatcher != null ?
 						introductionAwareMethodMatcher.matches(method, targetClass, hasIntroductions) :
@@ -306,18 +327,26 @@ public abstract class AopUtils {
 		if (candidateAdvisors.isEmpty()) {
 			return candidateAdvisors;
 		}
+		// 判断当前Advisor是否为IntroductionAdvisor，如果是，则按照IntroductionAdvisor的方式进行
+		// 过滤，这里主要的过滤逻辑在canApply()方法中
 		List<Advisor> eligibleAdvisors = new ArrayList<>();
+		//首先处理引介增强
 		for (Advisor candidate : candidateAdvisors) {
+			// 判断是否为IntroductionAdvisor，并且判断是否可以应用到当前类上
 			if (candidate instanceof IntroductionAdvisor && canApply(candidate, clazz)) {
 				eligibleAdvisors.add(candidate);
 			}
 		}
 		boolean hasIntroductions = !eligibleAdvisors.isEmpty();
+		// 如果当前Advisor不是IntroductionAdvisor类型，则通过canApply()方法判断当前Advisor是否
+		// 可以应用到当前bean
 		for (Advisor candidate : candidateAdvisors) {
+			// 对IntroductionAdvisor类型进行过滤
 			if (candidate instanceof IntroductionAdvisor) {
 				// already processed
 				continue;
 			}
+			// 判断是否可以应用到当前bean类型
 			if (canApply(candidate, clazz, hasIntroductions)) {
 				eligibleAdvisors.add(candidate);
 			}

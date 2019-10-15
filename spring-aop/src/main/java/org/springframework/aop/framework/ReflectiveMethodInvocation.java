@@ -159,30 +159,41 @@ public class ReflectiveMethodInvocation implements ProxyMethodInvocation, Clonea
 	@Nullable
 	public Object proceed() throws Throwable {
 		// We start with an index of -1 and increment early.
+		// 执行完所有增强后执行目标方法
+		// 这里currentInterceptorIndex记录了当前调用链中正在调用的Interceptor的下标，该数值初始为-1
 		if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
+			// 如果调用链为空，则直接调用目标方法
 			return invokeJoinpoint();
 		}
 
+		//获取下一个要执行的拦截器
 		Object interceptorOrInterceptionAdvice =
 				this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
 		if (interceptorOrInterceptionAdvice instanceof InterceptorAndDynamicMethodMatcher) {
 			// Evaluate dynamic method matcher here: static part will already have
 			// been evaluated and found to match.
+			//动态匹配
 			InterceptorAndDynamicMethodMatcher dm =
 					(InterceptorAndDynamicMethodMatcher) interceptorOrInterceptionAdvice;
 			Class<?> targetClass = (this.targetClass != null ? this.targetClass : this.method.getDeclaringClass());
+			// 对动态的方法进行匹配，如果匹配成功，才进行调用，否则直接进行下一个Interceptor的调用
 			if (dm.methodMatcher.matches(this.method, targetClass, this.arguments)) {
 				return dm.interceptor.invoke(this);
 			}
 			else {
 				// Dynamic matching failed.
 				// Skip this interceptor and invoke the next in the chain.
+				//不匹配则不执行拦截器
 				return proceed();
 			}
 		}
 		else {
 			// It's an interceptor, so we just invoke it: The pointcut will have
 			// been evaluated statically before this object was constructed.
+			// 普通拦截器，直接调用拦截器，比如：
+			// ExposeInvocationInterceptor、DelegatePerTargetObjectIntroductionInterceptor
+			// MethodBeforeAdviceInterceptor、AspectjAroundAdvice、AspectjAfterAdvice
+			// 将his作为参数传递以保证当前实例中调用链的执行
 			return ((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
 		}
 	}

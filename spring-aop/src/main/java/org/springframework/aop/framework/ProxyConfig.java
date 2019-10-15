@@ -34,12 +34,47 @@ public class ProxyConfig implements Serializable {
 	private static final long serialVersionUID = -8409359707199703185L;
 
 
+	/**
+	 * 这个属性设置为true时，目标类本身被代理而不是目标类的接口。
+	 * 如果这个属性被设置为true，CGLIB代理将被创建
+	 * 设置方式为<aop:aspectj-autoproxy proxy-target-class="true"></>
+	 */
 	private boolean proxyTargetClass = false;
 
+	/**
+	 * 用来控制通过CGLIB创建的代理是否使用激进的优化策略。除非完全了解AOP代理如何处理优化，
+	 * 否则不推荐用户使用这个设置。目前这个属性仅用于CGLIB代理，对于JDK动态代理（默认代理）无效
+	 */
 	private boolean optimize = false;
 
 	boolean opaque = false;
 
+	/**
+	 * 有时候目标对象内部的自我调用将无法实施切面中的增强，例如：
+	 * public interface AService{
+	 *     public void a();
+	 *     public void b();
+	 * }
+	 * public class AServiceImpl implements AService {
+	 *
+	 * 	   @Transactional(propagation=Propagation.REQUIRED)
+	 *     public void a() {
+	 *         this.b();
+	 *     }
+	 *
+	 *     @Transactional(propagation=Propagation.REQUIRED_NEW)
+	 *     public void b() {
+	 * 	 *
+	 * 	 * }
+	 * }
+	 * 	 此处的this指向目标对象，因此调用this.b()将不会执行b事务切面，即不会执行事务增强，
+	 * 	 为了解决这个问题我们可以这样做:
+	 * 	 	<aop:aspectj-autoproxy expose-proxy="true"></>
+	 * 	 this.b()改为((AService).AopContext.currentProxy).b(); 即可
+	 * 	 这样a和b方法同时增强。
+	 *
+	 *
+	 */
 	boolean exposeProxy = false;
 
 	private boolean frozen = false;

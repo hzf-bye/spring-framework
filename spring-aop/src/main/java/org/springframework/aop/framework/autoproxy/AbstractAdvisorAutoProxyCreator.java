@@ -73,8 +73,10 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	protected Object[] getAdvicesAndAdvisorsForBean(
 			Class<?> beanClass, String beanName, @Nullable TargetSource targetSource) {
 
+		//获取需要增强的方法
 		List<Advisor> advisors = findEligibleAdvisors(beanClass, beanName);
 		if (advisors.isEmpty()) {
+			//没有找到对应的增强返回null
 			return DO_NOT_PROXY;
 		}
 		return advisors.toArray();
@@ -91,10 +93,16 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	 * @see #extendAdvisors
 	 */
 	protected List<Advisor> findEligibleAdvisors(Class<?> beanClass, String beanName) {
+		//1.获取所有的增强
+		// 将当前系统中所有的切面类的切面逻辑进行封装，从而得到目标Advisor
 		List<Advisor> candidateAdvisors = findCandidateAdvisors();
+		//2.寻找所有的增强中适用于与bean的增强并应用
+		// 对获取到的所有Advisor进行判断，看其切面定义是否可以应用到当前bean，从而得到最终需要应用的Advisor
 		List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);
+		// 提供的hook方法，用于对目标Advisor进行扩展
 		extendAdvisors(eligibleAdvisors);
 		if (!eligibleAdvisors.isEmpty()) {
+			// 对需要代理的Advisor按照一定的规则进行排序
 			eligibleAdvisors = sortAdvisors(eligibleAdvisors);
 		}
 		return eligibleAdvisors;
@@ -121,8 +129,10 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	protected List<Advisor> findAdvisorsThatCanApply(
 			List<Advisor> candidateAdvisors, Class<?> beanClass, String beanName) {
 
+		//设置当前beanName至ThreadLocal中
 		ProxyCreationContext.setCurrentProxiedBeanName(beanName);
 		try {
+			//过滤已经得到的advisors
 			return AopUtils.findAdvisorsThatCanApply(candidateAdvisors, beanClass);
 		}
 		finally {

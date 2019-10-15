@@ -58,14 +58,17 @@ public class DefaultAdvisorAdapterRegistry implements AdvisorAdapterRegistry, Se
 		if (adviceObject instanceof Advisor) {
 			return (Advisor) adviceObject;
 		}
+		//因为此方法只对Advisor与Advice两种类型的数据有效，如果不是报错
 		if (!(adviceObject instanceof Advice)) {
 			throw new UnknownAdviceTypeException(adviceObject);
 		}
 		Advice advice = (Advice) adviceObject;
 		if (advice instanceof MethodInterceptor) {
 			// So well-known it doesn't even need an adapter.
+			//如果是MethodInterceptor类型则使用DefaultPointcutAdvisor封装
 			return new DefaultPointcutAdvisor(advice);
 		}
+		//如果存在Advisor适配器那么也同样需要封装
 		for (AdvisorAdapter adapter : this.adapters) {
 			// Check that it is supported.
 			if (adapter.supportsAdvice(advice)) {
