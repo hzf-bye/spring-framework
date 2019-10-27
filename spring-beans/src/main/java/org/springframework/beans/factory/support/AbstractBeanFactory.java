@@ -285,6 +285,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
+
+			//原型模式发生循环依赖直接报错
+
 			/*
 			 * 只有在单例的情况才会尝试解决循环依赖，
 			 * 原型模式下，如果存在A中有属性B，
@@ -353,7 +356,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 						/*
 						 * 假设A依赖B
 						 * 这里将 依赖的B->A注册到dependentBeanMap中的目的：
-						 * 1.因为A已经依赖B了，然后不希望B依赖A的情况，否则就船体依赖了，类似于构造器循环依赖，就报错
+						 * 1.因为A已经依赖B了，然后不希望B依赖A的情况，否则就传递依赖了，类似于构造器循环依赖，就报错
 						 * 2.然后如果真的出现B依赖A的情况那么在isDependent中就能检测的到，B->A已经在dependentBeanMap中存在了
 						 * 		因此就报错
 						 * 想了良久，牛逼的设计

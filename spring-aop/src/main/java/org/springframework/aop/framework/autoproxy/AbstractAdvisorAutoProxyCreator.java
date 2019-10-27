@@ -112,6 +112,13 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	 * Find all candidate Advisors to use in auto-proxying.
 	 * @return the List of candidate Advisors
 	 */
+	/**
+	 * 当使用注解方式配置AOP的时候并不是丢弃了对XML配置的支持，
+	 * 在这里调用父类方法加载配置文件中AOP声明
+	 * 其实就是从BeanFactory中找实现了Advisor接口的类
+	 * 比如我们spring的事务注解<tx:annotation-driven transaction-manager="transactionManager"/>
+	 * 就是会注册一个了Advisor类的BeanBeanFactoryTransactionAttributeSourceAdvisor
+	 */
 	protected List<Advisor> findCandidateAdvisors() {
 		Assert.state(this.advisorRetrievalHelper != null, "No BeanFactoryAdvisorRetrievalHelper available");
 		return this.advisorRetrievalHelper.findAdvisorBeans();

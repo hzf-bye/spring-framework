@@ -39,6 +39,9 @@ import org.springframework.web.servlet.ModelAndView;
  */
 public class SimpleControllerHandlerAdapter implements HandlerAdapter {
 
+	/**
+	 * 说明SimpleControllerHandlerAdapter就是处理普通的web请求
+	 */
 	@Override
 	public boolean supports(Object handler) {
 		return (handler instanceof Controller);

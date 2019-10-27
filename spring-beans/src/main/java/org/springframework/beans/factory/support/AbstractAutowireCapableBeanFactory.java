@@ -127,6 +127,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	/**
 	 * Whether to resort to injecting a raw bean instance in case of circular reference,
 	 * even if the injected bean eventually got wrapped.
+	 * 是否允许此Bean的原始类型被注入到其它Bean里面，即使自己最终会被包装（代理）
 	 */
 	private boolean allowRawInjectionDespiteWrapping = false;
 
@@ -433,6 +434,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		Object result = existingBean;
 		// 遍历 BeanPostProcessor
+		//这里是处理所有的BeanPostProcessor，要与getEarlyBeanReference区分开来
+		//例如@Async注解生成的代理，只会在这里生成，而不会在getEarlyBeanReference方法中，
+		//因为其对应的BeanPostProcessor是AsyncAnnotationBeanPostProcessor
 		for (BeanPostProcessor processor : getBeanPostProcessors()) {
 			// 处理
 			Object current = processor.postProcessAfterInitialization(result, beanName);
@@ -620,6 +624,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				logger.trace("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
+			//其中我们熟知的AOP就是在这里将advice动态织bean中，若没有则直接返回，bean不做任何处理
+
 			// 为避免后续的循环依赖，可以在bean初始化完成前将创建实例的ObjectFactory加入工厂
 			// lambda表达式匿名类，如果没有AOP，那么singletonFactory.getObject返回的就是此bean，
 			// 因此如果有循环依赖那么从缓存中获取到的singletonFactory中的bean与当前bean是一样的 因此解决了循环依赖
@@ -647,21 +653,54 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// <7> 循环依赖处理
+		//假设A依赖B，B依赖A
+		/**
+		 * 总结下来就是
+		 * 1.如果A存在代理，且此代理不是通过SmartInstantiationAwareBeanPostProcessor的子类创建的，
+		 * 	且A与B存在循环依赖，那么这种情况下会报错BeanCurrentlyInCreationException，
+		 * 	因为这种情况A在暴露自己的方法getEarlyBeanReference(方法中只会处理SmartInstantiationAwareBeanPostProcessor的子类)
+		 * 	中不会生成代理类，而在之后的initializeBean的方法中才会生成代理类(例如@Async注解是通过AsyncAnnotationBeanPostProcessor生成代理类)且
+		 *  @see allowRawInjectionDespiteWrapping 默认值为false，因此此时B依赖A的原始对象，而此时的A却是AsyncAnnotationBeanPostProcessor代理后的对象，就报错了。
+		 * 2.如果A存在代理，且此代理是通过SmartInstantiationAwareBeanPostProcessor的子类创建的，
+		 * 	那么spring是允许有循环依赖的，理由同上，区别就是在getEarlyBeanReference中生成了代理类，那么在initializeBean方法中就不会生成了，
+		 * 	因而if (exposedObject == bean)为true
+		 *
+		 */
 		if (earlySingletonExposure) {
 			// 获取 earlySingletonReference
+			/*
+			 * 如果存在循环依赖，则earlySingletonReference为返回的getEarlyBeanReference()方法的返回结果
+			 * 因为存在循环依赖的话，当前对象会被放置在earlySingletonObjects中，如果有代理的话，那么返回的就是代理对象
+			 * 如果不存在循环依赖返回键null
+			 */
 			Object earlySingletonReference = getSingleton(beanName, false);
 			// 只有在存在循环依赖的情况下，earlySingletonReference 才不会为空
-			//只有只有循环依赖的情况下才会有别的bean创建了此bean
-			// 且放在singletonObjects或者earlySingletonObjects中
+			// 只有循环依赖的情况下才会有别的bean创建了此bean
+			// 且此时bean放在earlySingletonObjects中
 			if (earlySingletonReference != null) {
 				// 如果 exposedObject 没有在初始化方法(initializeBean)中被改变，也就是没有被增强
 				if (exposedObject == bean) {
+					//那么就将代理的bean返回，因为getEarlyBeanReference方法中已经生产代理bean了
 					exposedObject = earlySingletonReference;
 				}
 				else if (!this.allowRawInjectionDespiteWrapping && hasDependentBean(beanName)) {
-					//获取当前bean所依赖的bean
+					/*
+					 * 如果来到这里说明bean即假设中的A在initializeBean方法中被代理了
+					 * 获取当前bean所依赖的bean
+					 */
 					String[] dependentBeans = getDependentBeans(beanName);
 					Set<String> actualDependentBeans = new LinkedHashSet<>(dependentBeans.length);
+					/*
+					 * 对所有的依赖进行一一检查，比如此处B就会有问题
+					 * B它经过removeSingletonIfCreatedForTypeCheckOnly最终返返回false
+					 * 因为alreadyCreated里面已经有它了表示B已经完全创建完成了。
+					 * 而B都完成了，所以B的属性A也赋值完成了，
+					 * 但是B里面引用的A和主流程我这个A竟然不相等（因为B里面引入的A是getEarlyBeanReference返回值，
+					 * 而exposedObject在initializeBean方法中改变了，因此肯定不相等）
+					 * 那肯定就有问题(说明不是最终的)。
+					 * 所以最终会被加入到actualDependentBeans里面去
+					 */
+
 					for (String dependentBean : dependentBeans) {
 						//检测依赖
 						if (!removeSingletonIfCreatedForTypeCheckOnly(dependentBean)) {
@@ -1019,6 +1058,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		//其中我们熟知的AOP就是在这里将advice动态织bean中，若没有则直接返回，bean不做任何处理
 		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
+				//特别注意这里是处理SmartInstantiationAwareBeanPostProcessor类型的BeanPostProcessor
 				if (bp instanceof SmartInstantiationAwareBeanPostProcessor) {
 					SmartInstantiationAwareBeanPostProcessor ibp = (SmartInstantiationAwareBeanPostProcessor) bp;
 					exposedObject = ibp.getEarlyBeanReference(exposedObject, beanName);

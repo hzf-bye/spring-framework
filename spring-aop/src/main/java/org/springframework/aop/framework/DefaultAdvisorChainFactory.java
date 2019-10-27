@@ -59,6 +59,8 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 		Class<?> actualClass = (targetClass != null ? targetClass : method.getDeclaringClass());
 		Boolean hasIntroductions = null;
 
+		// advisors为适合此targetClass的所有的切面逻辑，
+		// 需要遍历判断advisor中的增强是否匹配从method
 		for (Advisor advisor : advisors) {
 			if (advisor instanceof PointcutAdvisor) {
 				// Add it conditionally.
@@ -86,7 +88,7 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 						match = mm.matches(method, actualClass);
 					}
 					if (match) {
-						// 将Advisor对象转换为MethodInterceptor数组
+						// 将Advisor对象中的advice(增强)转换为MethodInterceptor数组
 						MethodInterceptor[] interceptors = registry.getInterceptors(advisor);
 						// 判断如果是动态匹配，则使用InterceptorAndDynamicMethodMatcher对其进行封装
 						if (mm.isRuntime()) {

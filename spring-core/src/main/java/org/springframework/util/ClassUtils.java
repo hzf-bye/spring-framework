@@ -884,6 +884,7 @@ public abstract class ClassUtils {
 	 * CGLIB-generated subclass.
 	 * @param instance the instance to check
 	 * @return the user-defined class
+	 * 获取用户定义的本来的类型，大部分情况下就是类型本身，主要针对cglib做了额外的判断，获取cglib代理之后的父类；
 	 */
 	public static Class<?> getUserClass(Object instance) {
 		Assert.notNull(instance, "Instance must not be null");
@@ -895,6 +896,7 @@ public abstract class ClassUtils {
 	 * class, but the original class in case of a CGLIB-generated subclass.
 	 * @param clazz the class to check
 	 * @return the user-defined class
+	 * 获取用户定义的本来的类型，大部分情况下就是类型本身，主要针对cglib做了额外的判断，获取cglib代理之后的父类
 	 */
 	public static Class<?> getUserClass(Class<?> clazz) {
 		if (clazz.getName().contains(CGLIB_CLASS_SEPARATOR)) {
@@ -1050,6 +1052,7 @@ public abstract class ClassUtils {
 	 * (may be {@code null} to indicate the method's declaring class)
 	 * @return the qualified name of the method
 	 * @since 4.3.4
+	 * 获取方法的全名，包括类的权限定名.方法名
 	 */
 	public static String getQualifiedMethodName(Method method, @Nullable Class<?> clazz) {
 		Assert.notNull(method, "Method must not be null");
@@ -1247,6 +1250,7 @@ public abstract class ClassUtils {
 	 * @return the specific target method, or the original method if the
 	 * {@code targetClass} does not implement it
 	 * @see #getInterfaceMethodIfPossible
+	 * 获得最匹配的一个可以执行的方法
 	 */
 	public static Method getMostSpecificMethod(Method method, @Nullable Class<?> targetClass) {
 		if (targetClass != null && targetClass != method.getDeclaringClass() && isOverridable(method, targetClass)) {

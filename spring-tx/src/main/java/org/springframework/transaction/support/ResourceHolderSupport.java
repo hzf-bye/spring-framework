@@ -37,6 +37,9 @@ public abstract class ResourceHolderSupport implements ResourceHolder {
 
 	private boolean synchronizedWithTransaction = false;
 
+	/**
+	 * true标识标记为需要回滚，但是还没回滚
+	 */
 	private boolean rollbackOnly = false;
 
 	@Nullable

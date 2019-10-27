@@ -112,11 +112,19 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	 * If this variable is set to a non-negative value, it will be used for setting the
 	 * fetchSize property on statements used for query processing.
 	 */
+	/**
+	 * 为了减少网络交互次数。
+	 * 访问ResultSet时，如果它每次只从服务器上读取一行数据，则会产生大量的开销。
+	 * fetchSize的意思是，当调用rs.next时，ResultSet会一次性从服务器上取得多少行数据回来，
+	 * 这样下次rs.next时，就可以直接重内存中获取数据而不需要网络交互，提高了效率。
+	 * 这个设置可能会被某些JDBC驱动忽略，且设置过大也会造成内存的上升
+	 */
 	private int fetchSize = -1;
 
 	/**
 	 * If this variable is set to a non-negative value, it will be used for setting the
 	 * maxRows property on statements used for query processing.
+	 * maxRows表示Statement对象生成的ResultSet对象可以包含的最大行数
 	 */
 	private int maxRows = -1;
 
@@ -371,6 +379,7 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 		Connection con = DataSourceUtils.getConnection(obtainDataSource());
 		Statement stmt = null;
 		try {
+			//使用Connection创建Statement
 			stmt = con.createStatement();
 			applyStatementSettings(stmt);
 			T result = action.doInStatement(stmt);
@@ -457,6 +466,10 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 		query(sql, new RowCallbackHandlerResultSetExtractor(rch));
 	}
 
+	/**
+	 * @param sql 要执行的sql语句，select * from user where id = ?;
+	 * @param rowMapper 自定义实现类
+	 */
 	@Override
 	public <T> List<T> query(String sql, RowMapper<T> rowMapper) throws DataAccessException {
 		return result(query(sql, new RowMapperResultSetExtractor<>(rowMapper)));
@@ -474,9 +487,16 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 		return DataAccessUtils.nullableSingleResult(results);
 	}
 
+	/**
+	 * 与query最大的不同是这里的RowMapper为SingleColumnRowMapper
+	 * 我们直接分析其mapRow方法即可
+	 * @param sql sql语句
+	 * @param requiredType 返回的对象类型
+	 */
 	@Override
 	@Nullable
 	public <T> T queryForObject(String sql, Class<T> requiredType) throws DataAccessException {
+		//getSingleColumnRowMapper封装requiredType
 		return queryForObject(sql, getSingleColumnRowMapper(requiredType));
 	}
 
@@ -609,11 +629,15 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 			logger.debug("Executing prepared SQL statement" + (sql != null ? " [" + sql + "]" : ""));
 		}
 
+		//获取数据库连接
 		Connection con = DataSourceUtils.getConnection(obtainDataSource());
 		PreparedStatement ps = null;
 		try {
+			//使用PreparedStatementCreator创建PreparedStatement
 			ps = psc.createPreparedStatement(con);
+			//应用用户设定的输入参数
 			applyStatementSettings(ps);
+			//调用回调函数，处理一些通用方法外的个性化处理
 			T result = action.doInPreparedStatement(ps);
 			handleWarnings(ps);
 			return result;
@@ -621,6 +645,7 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 		catch (SQLException ex) {
 			// Release Connection early, to avoid potential connection pool deadlock
 			// in the case when the exception translator hasn't been initialized yet.
+			// 释放数据库连接 避免当异常转换器没有被初始化的时候出现潜在的连接池死锁
 			if (psc instanceof ParameterDisposer) {
 				((ParameterDisposer) psc).cleanupParameters();
 			}
@@ -676,6 +701,8 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 						pss.setValues(ps);
 					}
 					rs = ps.executeQuery();
+					//将结果封装到pojo中
+					//rse为RowMapperResultSetExtractor
 					return rse.extractData(rs);
 				}
 				finally {
@@ -697,12 +724,14 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	@Override
 	@Nullable
 	public <T> T query(String sql, @Nullable PreparedStatementSetter pss, ResultSetExtractor<T> rse) throws DataAccessException {
+		//使用SimplePreparedStatementCreator封装sql
 		return query(new SimplePreparedStatementCreator(sql), pss, rse);
 	}
 
 	@Override
 	@Nullable
 	public <T> T query(String sql, Object[] args, int[] argTypes, ResultSetExtractor<T> rse) throws DataAccessException {
+		//使用ArgumentTypePreparedStatementSetter封装参数
 		return query(sql, newArgTypePreparedStatementSetter(args, argTypes), rse);
 	}
 
@@ -753,6 +782,11 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 		return result(query(sql, pss, new RowMapperResultSetExtractor<>(rowMapper)));
 	}
 
+	/**
+	 * @param sql 要执行的sql语句，select * from user where id = ?;
+	 * @param args 上面语句？对应的参数
+	 * @param argTypes 参数的类型 {@link java.sql.Types}
+	 */
 	@Override
 	public <T> List<T> query(String sql, Object[] args, int[] argTypes, RowMapper<T> rowMapper) throws DataAccessException {
 		return result(query(sql, args, argTypes, new RowMapperResultSetExtractor<>(rowMapper)));
@@ -859,11 +893,17 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 
 		logger.debug("Executing prepared SQL update");
 
+		/*
+		 * lambda表达式创建匿名类为PreparedStatementCallback的实现，
+		 * 以及重写其doInPreparedStatement方法作为回调函数，execute方法中执行
+		 */
 		return updateCount(execute(psc, ps -> {
 			try {
 				if (pss != null) {
+					//设置PreparedStatement所需的全部参数
 					pss.setValues(ps);
 				}
+				//真正指定sql的方法
 				int rows = ps.executeUpdate();
 				if (logger.isTraceEnabled()) {
 					logger.trace("SQL update affected " + rows + " rows");
@@ -914,11 +954,18 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 
 	@Override
 	public int update(String sql, @Nullable PreparedStatementSetter pss) throws DataAccessException {
+		//使用SimplePreparedStatementCreator封装sql语句
 		return update(new SimplePreparedStatementCreator(sql), pss);
 	}
 
+	/**
+	 * @param sql 要执行的sql语句，insert into(column1, column2, column3) values(?, ?, ?);
+	 * @param args 上面语句？对应的参数
+	 * @param argTypes 参数的类型 {@link java.sql.Types}
+	 */
 	@Override
 	public int update(String sql, Object[] args, int[] argTypes) throws DataAccessException {
+		//使用ArgumentTypePreparedStatementSetter封装 参数以及参数类型
 		return update(sql, newArgTypePreparedStatementSetter(args, argTypes));
 	}
 
@@ -1403,8 +1450,17 @@ public class JdbcTemplate extends JdbcAccessor implements JdbcOperations {
 	 * @see org.springframework.jdbc.SQLWarningException
 	 */
 	protected void handleWarnings(Statement stmt) throws SQLException {
+		//当设置为忽略警告事只打印日志
 		if (isIgnoreWarnings()) {
+			//如果日志开启的情况下打印日志
 			if (logger.isDebugEnabled()) {
+				/*
+				 * SQLWarning提供关于数据库访问警告信息的异常。
+				 * 这些警告直接链接到导致报告警告的方法所在的对象。
+				 * 警告可以从Connection、Statement、ResultSet对象中获取。
+				 * 试图在已经关闭的链接上获取警告将抛出异常。类似地，视图在已经关闭的语句上或者已经关闭的
+				 * 结果集上获取警告也将导致抛异常。注意，关闭语句时还会关闭它可能生成的结果集
+				 */
 				SQLWarning warningToLog = stmt.getWarnings();
 				while (warningToLog != null) {
 					logger.debug("SQLWarning ignored: SQL state '" + warningToLog.getSQLState() + "', error code '" +

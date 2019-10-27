@@ -149,13 +149,18 @@ public abstract class HttpServletBean extends HttpServlet implements Environment
 	public final void init() throws ServletException {
 
 		// Set bean properties from init parameters.
+		//解析init-param并封装值pvs中
 		PropertyValues pvs = new ServletConfigPropertyValues(getServletConfig(), this.requiredProperties);
 		if (!pvs.isEmpty()) {
 			try {
+				//将当前的这个servlet类转化为一个BeanWrapper，从而能够以spring的方式来对init-param的值进行注入
 				BeanWrapper bw = PropertyAccessorFactory.forBeanPropertyAccess(this);
 				ResourceLoader resourceLoader = new ServletContextResourceLoader(getServletContext());
+				//注册自定义属性编辑器，一旦遇到Resource类型的属性将会使用ResourceEditor进行解析
 				bw.registerCustomEditor(Resource.class, new ResourceEditor(resourceLoader, getEnvironment()));
+				//空实现，留给子类覆盖
 				initBeanWrapper(bw);
+				//属性注入
 				bw.setPropertyValues(pvs, true);
 			}
 			catch (BeansException ex) {
@@ -167,6 +172,7 @@ public abstract class HttpServletBean extends HttpServlet implements Environment
 		}
 
 		// Let subclasses do whatever initialization they like.
+		//留给子类扩展，比如FrameworkServlet
 		initServletBean();
 	}
 
@@ -214,6 +220,9 @@ public abstract class HttpServletBean extends HttpServlet implements Environment
 		 * @param requiredProperties set of property names we need, where
 		 * we can't accept default values
 		 * @throws ServletException if any required properties are missing
+		 * 封装属性主要是对初始化参数进行封装，也就是servlet中配置的 <init-param>中的配置的封装
+		 * 当然用户可以通过对requiredProperties参数的初始化来强制验证某些属性的必要性，这样在封装
+		 * 过程中，一但检测到requiredProperties中的属性没有指定初始值，就会抛出异常
 		 */
 		public ServletConfigPropertyValues(ServletConfig config, Set<String> requiredProperties)
 				throws ServletException {

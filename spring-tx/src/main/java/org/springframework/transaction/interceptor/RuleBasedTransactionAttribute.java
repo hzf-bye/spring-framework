@@ -139,6 +139,17 @@ public class RuleBasedTransactionAttribute extends DefaultTransactionAttribute i
 
 		if (this.rollbackRules != null) {
 			for (RollbackRuleAttribute rule : this.rollbackRules) {
+				/*
+				 * 获取@Transactional的属性rollbackFor,rollbackForClassName,noRollbackFor,noRollbackForClassName
+				 * 四个属性指定的异常类是否为当前ex类型或者是ex类型的父类，
+				 * 当然如果指定异常类型为Throwable，那么返回-1，则还是winner==null，
+				 * 会按照spring默认回滚方式进行回滚
+				 *
+				 * 因为解析@Transactional的属性的顺序是rollbackFor,rollbackForClassName,noRollbackFor,noRollbackForClassName
+				 * 所以若rollbackFor配置了异常类A回滚，noRollbackFor配置了异常类A不回滚，那么后面的会覆盖前面的设置，
+				 * 即异常类A不回滚
+				 *
+				 */
 				int depth = rule.getDepth(ex);
 				if (depth >= 0 && depth < deepest) {
 					deepest = depth;
@@ -152,11 +163,15 @@ public class RuleBasedTransactionAttribute extends DefaultTransactionAttribute i
 		}
 
 		// User superclass behavior (rollback on unchecked) if no rule matches.
+		// 如果没有指定需要回滚的异常类型，或者指定的异常回滚类型，或者异常不回滚的类型为Throwable
+		// 那么就使用spring提供的使用默认的异常处理机制，只回滚RuntimeException或者Error类型的异常
 		if (winner == null) {
 			logger.trace("No relevant rollback rule found: applying default rules");
 			return super.rollbackOn(ex);
 		}
 
+		//如果是NoRollbackRuleAttribute类型，说明此异常是不回滚的，返回false
+		// 反之则是需要回滚的
 		return !(winner instanceof NoRollbackRuleAttribute);
 	}
 

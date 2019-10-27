@@ -233,12 +233,35 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 		return obtainDataSource();
 	}
 
+	/**
+	 * 这段代码中主要是根据this.dataSource来获取ConnectionHolder，
+	 * 这个ConnectionHolder是放在TransactionSynchronizationManager的ThreadLocal中持有的，
+	 * 如果是第一次来获取，肯定得到是null。
+	 */
 	@Override
 	protected Object doGetTransaction() {
 		DataSourceTransactionObject txObject = new DataSourceTransactionObject();
+		//对保存点的设置，是否允许保存点取决于是否设置了允许嵌入式事务
+		//使用无参构造函数创建DataSourceTransactionManager时，nestedTransactionAllowed会设置为true
 		txObject.setSavepointAllowed(isNestedTransactionAllowed());
+		// 如果当前线程已经记录数据路连接则使用原有的连接
+		//这一行代码中TransactionSynchronizationManager很重要，是对connection的核心获取、持有、删除等
+		//org.springframework.transaction.support.TransactionSynchronizationManager.resources
+		// 作为ThreadLocal类型的变量缓存当前线程dataSource与ConnectionHolder对应关系
 		ConnectionHolder conHolder =
 				(ConnectionHolder) TransactionSynchronizationManager.getResource(obtainDataSource());
+		/*
+		 * 从当前线程中获取ConnectionHolder
+		 * 1.比如事务的传播特性是PROPAGATION_REQUIRED，
+		 * 	1.1如果从当前线程中获取到了conHolder，因此必须将newConnectionHolder设置为false，标识当前的数据库连接不是新创建的连接
+		 * 	1.2如果从当前线程中没有获取到conHolder，那么此时conHolder为null，在之后的逻辑中必然会创建一个新的ConnectionHolder
+		 * 	  那时候newConnectionHolder会被设置成false，标识新创建的数据库连接
+		 * 2.比如事务的传播特性是PROPAGATION_REQUIRES_NEW
+		 * 	那么无论此时有没有获取到数据库连接，都会讲此conHolder从当前线程清除，并且保留起来便于后续恢复，
+		 * 	然后之后都会创建一个新的ConnectionHolder，会将newConnectionHolder设置为true，因此这里的赋值无意义
+		 * 综上，这里设置为false主要是为1.1情况考虑的，其它情况此时赋值都会被覆盖。
+		 */
+		// false 非新创建连接
 		txObject.setConnectionHolder(conHolder, false);
 		return txObject;
 	}
@@ -246,11 +269,14 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 	@Override
 	protected boolean isExistingTransaction(Object transaction) {
 		DataSourceTransactionObject txObject = (DataSourceTransactionObject) transaction;
+		//如果是第一次开启事务这里必然是false，否则将返回true。
 		return (txObject.hasConnectionHolder() && txObject.getConnectionHolder().isTransactionActive());
 	}
 
 	/**
 	 * This implementation sets the isolation level but ignores the timeout.
+	 * 构造transaction，包括设置connectionHolder、隔离级别、timeoit
+	 * 如果是新连接，绑定到当前线程
 	 */
 	@Override
 	protected void doBegin(Object transaction, TransactionDefinition definition) {
@@ -258,41 +284,60 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 		Connection con = null;
 
 		try {
+			//如果当前线程中没有connectionHolder或者对于事务同步表示设置为true的，需要重新获取连接
 			if (!txObject.hasConnectionHolder() ||
 					txObject.getConnectionHolder().isSynchronizedWithTransaction()) {
+				//从dataSource中获取一个Connection
 				Connection newCon = obtainDataSource().getConnection();
 				if (logger.isDebugEnabled()) {
 					logger.debug("Acquired Connection [" + newCon + "] for JDBC transaction");
 				}
+				//为当前Transaction设置ConnectionHolder，并且设置newConnectionHolder为true
 				txObject.setConnectionHolder(new ConnectionHolder(newCon), true);
 			}
 
 			txObject.getConnectionHolder().setSynchronizedWithTransaction(true);
 			con = txObject.getConnectionHolder().getConnection();
 
+			/*
+			 * 这里主要是根据definition对connection进行一些设置
+			 * 设置隔离级别以及只读标识，
+			 * 隔离级别的控制也交给connection无控制
+			 * 只读标识核心实现是设置connection上的readOnly属性
+			 */
+			//如果配置的隔离级别为默认值或者数据库默认的隔离级别与配置的隔离级别相等，那么返回null
+			//否则返回数据库默认的隔离级别
 			Integer previousIsolationLevel = DataSourceUtils.prepareConnectionForTransaction(con, definition);
+			//不为空表示之前的隔离级别即数据库默认的隔离级别
 			txObject.setPreviousIsolationLevel(previousIsolationLevel);
 
 			// Switch to manual commit if necessary. This is very expensive in some JDBC drivers,
 			// so we don't want to do it unnecessarily (for example if we've explicitly
 			// configured the connection pool to set it already).
+			//更改自动提交设置，由spring控制提交
 			if (con.getAutoCommit()) {
 				txObject.setMustRestoreAutoCommit(true);
 				if (logger.isDebugEnabled()) {
 					logger.debug("Switching JDBC Connection [" + con + "] to manual commit");
 				}
+				//开启事务，设置autoCommit为false
 				con.setAutoCommit(false);
 			}
 
 			prepareTransactionalConnection(con, definition);
+			// 设置当前线程是否存在事务的依据
+			// 这里设置transactionActive为true，还记得签名判断是否存在的transaction吧（isExistingTransaction方法）？就是根据这个
 			txObject.getConnectionHolder().setTransactionActive(true);
 
+			//设置超时时间，如果指定了有意义的超时时间的话
 			int timeout = determineTimeout(definition);
 			if (timeout != TransactionDefinition.TIMEOUT_DEFAULT) {
 				txObject.getConnectionHolder().setTimeoutInSeconds(timeout);
 			}
 
 			// Bind the connection holder to the thread.
+			// 这里将当前的connection放入TransactionSynchronizationManager中的resources的ThreadLocal变量中，
+			// 如果下次调用可以判断为当前线程已有事务
 			if (txObject.isNewConnectionHolder()) {
 				TransactionSynchronizationManager.bindResource(obtainDataSource(), txObject.getConnectionHolder());
 			}
@@ -365,15 +410,19 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 
 		// Remove the connection holder from the thread, if exposed.
 		if (txObject.isNewConnectionHolder()) {
+			//将数据库连接从当前线程中解除绑定
 			TransactionSynchronizationManager.unbindResource(obtainDataSource());
 		}
 
 		// Reset connection.
+		// 释放连接
 		Connection con = txObject.getConnectionHolder().getConnection();
 		try {
 			if (txObject.isMustRestoreAutoCommit()) {
+				// 恢复数据库连接的自动提交属性
 				con.setAutoCommit(true);
 			}
+			//重置数据库连接，恢复隔离级别为先前的隔离级别，以及重置readOnly属性
 			DataSourceUtils.resetConnectionAfterTransaction(con, txObject.getPreviousIsolationLevel());
 		}
 		catch (Throwable ex) {
@@ -384,6 +433,7 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 			if (logger.isDebugEnabled()) {
 				logger.debug("Releasing JDBC Connection [" + con + "] after transaction");
 			}
+			// 如果当前事务是独立的新创建的事务完成时会释放数据库连接
 			DataSourceUtils.releaseConnection(con, this.dataSource);
 		}
 

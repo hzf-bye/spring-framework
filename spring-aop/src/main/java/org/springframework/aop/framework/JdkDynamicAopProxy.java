@@ -197,6 +197,8 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 				// Make invocation available if necessary.
 				// 有时候目标对象内部的自我调用将无法实施切面中的增强
 				// 如果设置了需要暴露代理对象，则将当前对象设置到AopContext中
+				// AopContext是一个ThreadLocal变量，即线程本地变量
+				// 因为如果是代理类代用method那么就会来这而，所以之后再在当前线程中获取此暴露的proxy即可
 				oldProxy = AopContext.setCurrentProxy(proxy);
 				setProxyContext = true;
 			}

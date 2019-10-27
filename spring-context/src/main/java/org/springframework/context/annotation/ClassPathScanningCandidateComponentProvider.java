@@ -428,6 +428,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 				if (resource.isReadable()) {
 					try {
 						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
+						//判断当前扫描的文件是否符合要求
 						if (isCandidateComponent(metadataReader)) {
 							ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 							sbd.setResource(resource);
@@ -486,6 +487,9 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	 * and does match at least one include filter.
 	 * @param metadataReader the ASM ClassReader for the class
 	 * @return whether the class qualifies as a candidate component
+	 * 在之前已经有excludeFilters与includeFilters这两个属性的设置，
+	 * 并且知道对应的文件是否符合要求是根据过滤器中的match方法返回的信息来判断的。
+	 * 当然用户可以实现并注册满足自己业务逻辑的过滤器来控制扫描结果，metadataReader中有所需要过滤的全部文件信息。
 	 */
 	protected boolean isCandidateComponent(MetadataReader metadataReader) throws IOException {
 		for (TypeFilter tf : this.excludeFilters) {

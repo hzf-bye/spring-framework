@@ -337,27 +337,45 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		}
 
 		// If the transaction attribute is null, the method is non-transactional.
+		// 获取事务对应的属性，
 		TransactionAttributeSource tas = getTransactionAttributeSource();
+		//这里tas不为空为AnnotationTransactionAttributeSource类型，
+		// 且在判断增强是否与对应的类匹配的时候已经将方法对应的增强缓存在attributeCache中了
+		// txArr为RuleBasedTransactionAttribute类型
 		final TransactionAttribute txAttr = (tas != null ? tas.getTransactionAttribute(method, targetClass) : null);
+
+		/*
+		 * 获取beanFactory的transactionManager，
+		 * 即spring自定义标签中<tx:annotation-driven transaction-manager="transactionManager"/>
+		 * 中的transaction-manager的值，如标签中未指定则默认值为transactionManager
+		 */
 		final PlatformTransactionManager tm = determineTransactionManager(txAttr);
+		//构造出方法的唯一标识（类.方法，如从com.hzf.service.UserServiceImpl.save）
 		final String joinpointIdentification = methodIdentification(method, targetClass, txAttr);
 
+		//声明式事务的处理
+		//如果txAttr为空或者tm 属于非CallbackPreferringPlatformTransactionManager，执行目标增强
 		if (txAttr == null || !(tm instanceof CallbackPreferringPlatformTransactionManager)) {
 			// Standard transaction demarcation with getTransaction and commit/rollback calls.
+			//创建transactionInfo
+			//看是否有必要创建一个事务，根据事务传播行为，做出相应的判断
 			TransactionInfo txInfo = createTransactionIfNecessary(tm, txAttr, joinpointIdentification);
 
 			Object retVal;
 			try {
 				// This is an around advice: Invoke the next interceptor in the chain.
 				// This will normally result in a target object being invoked.
+				//回调方法执行，执行目标方法（原有的业务逻辑）
 				retVal = invocation.proceedWithInvocation();
 			}
 			catch (Throwable ex) {
 				// target invocation exception
+				// 异常回滚
 				completeTransactionAfterThrowing(txInfo, ex);
 				throw ex;
 			}
 			finally {
+				//清除信息
 				cleanupTransactionInfo(txInfo);
 			}
 
@@ -369,6 +387,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 				}
 			}
 
+			//提交事务
 			commitTransactionAfterReturning(txInfo);
 			return retVal;
 		}
@@ -377,6 +396,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 			final ThrowableHolder throwableHolder = new ThrowableHolder();
 
 			// It's a CallbackPreferringPlatformTransactionManager: pass a TransactionCallback in.
+			//编程式事务处理(CallbackPreferringPlatformTransactionManager)
 			try {
 				Object result = ((CallbackPreferringPlatformTransactionManager) tm).execute(txAttr, status -> {
 					TransactionInfo txInfo = prepareTransactionInfo(tm, txAttr, joinpointIdentification, status);
@@ -545,6 +565,9 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 			@Nullable TransactionAttribute txAttr, final String joinpointIdentification) {
 
 		// If no name specified, apply method identification as transaction name.
+		// 如果没有指定名称使用方法唯一标识，并使用DelegatingTransactionAttribute封装txAttr
+		// 当前txArr为RuleBasedTransactionAttribute类型，
+		// 这里用DelegatingTransactionAttribute封装是为了提供更多的功能
 		if (txAttr != null && txAttr.getName() == null) {
 			txAttr = new DelegatingTransactionAttribute(txAttr) {
 				@Override
@@ -557,6 +580,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		TransactionStatus status = null;
 		if (txAttr != null) {
 			if (tm != null) {
+				//获取TransactionStatus
 				status = tm.getTransaction(txAttr);
 			}
 			else {
@@ -566,6 +590,13 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 				}
 			}
 		}
+		/*
+		 * 根据指定的属性与status准备一个TransactionInfo
+		 *
+		 * 我们需要将所有的事务信息统一记录在TransactionInfo实例中，
+		 * 这个实例包含了目标方法开始前的所有状态信息，一旦事务执行失败，spring就会通过TransactionInfo
+		 * 类型的实例中的信息来进行事务回滚
+		 */
 		return prepareTransactionInfo(tm, txAttr, joinpointIdentification, status);
 	}
 
@@ -588,6 +619,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 				logger.trace("Getting transaction for [" + txInfo.getJoinpointIdentification() + "]");
 			}
 			// The transaction manager will flag an error if an incompatible tx already exists.
+			// 记录事务的状态
 			txInfo.newTransactionStatus(status);
 		}
 		else {
@@ -602,6 +634,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		// We always bind the TransactionInfo to the thread, even if we didn't create
 		// a new transaction here. This guarantees that the TransactionInfo stack
 		// will be managed correctly even if no transaction was created by this aspect.
+		//将生成的TransactionInfo当前线程的ThreadLocal
 		txInfo.bindToThread();
 		return txInfo;
 	}
@@ -627,13 +660,17 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 	 * @param ex throwable encountered
 	 */
 	protected void completeTransactionAfterThrowing(@Nullable TransactionInfo txInfo, Throwable ex) {
+		//当抛出异常时判断当前事务是否存在，这是基础依据
 		if (txInfo != null && txInfo.getTransactionStatus() != null) {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Completing transaction for [" + txInfo.getJoinpointIdentification() +
 						"] after exception: " + ex);
 			}
+			// 这里判断是否回滚默认的依据是抛出的异常是否是RuntimeException或者是Error的类型
+			// 或者有没有指定的异常类型需不需要回滚
 			if (txInfo.transactionAttribute != null && txInfo.transactionAttribute.rollbackOn(ex)) {
 				try {
+					//根据TransactionStatus信息进行回滚
 					txInfo.getTransactionManager().rollback(txInfo.getTransactionStatus());
 				}
 				catch (TransactionSystemException ex2) {
@@ -650,6 +687,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 				// We don't roll back on this exception.
 				// Will still roll back if TransactionStatus.isRollbackOnly() is true.
 				try {
+					//如果不满足回滚条件即使抛出异常也会提交
 					txInfo.getTransactionManager().commit(txInfo.getTransactionStatus());
 				}
 				catch (TransactionSystemException ex2) {
@@ -672,6 +710,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 	 */
 	protected void cleanupTransactionInfo(@Nullable TransactionInfo txInfo) {
 		if (txInfo != null) {
+			//这里就是将txInfo进行重置工作，让它恢复到前一个状态。
 			txInfo.restoreThreadLocalStatus();
 		}
 	}

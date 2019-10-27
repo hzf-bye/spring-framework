@@ -133,6 +133,14 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	private final Set<String> targetSourcedBeans = Collections.newSetFromMap(new ConcurrentHashMap<>(16));
 
+	/***
+	 * 缓存的是已经去找是否有对应代理的bean了（无论是否真的有对应的代理）
+	 * key 为beanName或者&beanName或者Class<?> beanClass
+	 * value 原始的bean
+	 * earlyProxyReferences不为空，说明earlyProxyReferences中的bean已经去找过其是否有代理了
+	 * 通过earlyProxyReferences保证单例bean生成的代理对象是一个
+	 *
+	 */
 	private final Map<Object, Object> earlyProxyReferences = new ConcurrentHashMap<>(16);
 
 	/**
@@ -322,6 +330,9 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	 * Create a proxy with the configured interceptors if the bean is
 	 * identified as one to proxy by the subclass.
 	 * @see #getAdvicesAndAdvisorsForBean
+	 * 在bean创建时可能调用
+	 * 1.AbstractAutowireCapableBeanFactory#createBean(String, RootBeanDefinition, Object[])中的Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
+	 * 2.AbstractAutowireCapableBeanFactory#doCreateBean(String, RootBeanDefinition, Object[])中的exposedObject = initializeBean(beanName, exposedObject, mbd)方法中的wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 	 */
 	@Override
 	public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
@@ -334,7 +345,8 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			 * 2. beanName为空，那么cacheKey为beanClass
 			 */
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
-			// 判断当前bean是否正在被代理，如果正在被代理则不进行封装
+			// 判断当前bean是否已经找过代理了（无论是否真的有对应的代理），如果是则不再去找了
+			//getEarlyBeanReference方法会对earlyProxyReferences设置
 			if (this.earlyProxyReferences.remove(cacheKey) != bean) {
 				//如果它适合被代理，则需要封装指定bean
 				return wrapIfNecessary(bean, beanName, cacheKey);
@@ -371,6 +383,12 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	 * @param beanName the name of the bean
 	 * @param cacheKey the cache key for metadata access
 	 * @return a proxy wrapping the bean, or the raw bean instance as-is
+	 * 两个地方调用
+	 * 1.postProcessAfterInitialization，至于什么地方调用postProcessAfterInitialization上面已经注释
+	 * 2.getEarlyBeanReference，至于什么地方调用getEarlyBeanReference方法？
+	 * 	是在创建bean的doCreateBean方法中，如果此bean是单例模式&允许循环依赖&当前bean正在被创建中，
+	 * 	那么在讲bean加入singletonFactories中时会调用getEarlyBeanReference方法，意思就是如果此bean需要被代理，
+	 * 	那么就将代理bean加入到singletonFactories中，之后获取到的bean就是代理bean了
 	 */
 	protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
 		// 判断当前bean是否在TargetSource缓存中存在，如果存在，则直接返回当前bean。
@@ -395,7 +413,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 		// Create proxy if we have advice.
 		//如果存在增强方法则创建代理
-		// 获取当前bean的Advices和Advisors
+		//获取当前bean的Advices和Advisors
 		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
 		//如果获取到了增强则需要针对增强创建代理
 		if (specificInterceptors != DO_NOT_PROXY) {

@@ -91,6 +91,7 @@ public class RowMapperResultSetExtractor<T> implements ResultSetExtractor<List<T
 		List<T> results = (this.rowsExpected > 0 ? new ArrayList<>(this.rowsExpected) : new ArrayList<>());
 		int rowNum = 0;
 		while (rs.next()) {
+			//rowMapper为系统自定义实现类，并且重写了其mapRow方法，因此可以将结果集封装到指定的POJO中
 			results.add(this.rowMapper.mapRow(rs, rowNum++));
 		}
 		return results;

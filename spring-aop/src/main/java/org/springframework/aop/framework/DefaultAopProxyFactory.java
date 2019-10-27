@@ -57,6 +57,7 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 						"Either an interface or a target is required for proxy creation.");
 			}
 			// 如果被代理的类是一个接口，或者被代理的类是使用Jdk代理生成的类，此时还是使用Jdk代理
+			//判断目标类是不是接口类或Proxy的子类，或者在proxyClassCache中，这个缓存是一个弱引用缓存，内部信息在一段时间没用被使用就会清理掉
 			if (targetClass.isInterface() || Proxy.isProxyClass(targetClass)) {
 				return new JdkDynamicAopProxy(config);
 			}

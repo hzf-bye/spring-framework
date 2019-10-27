@@ -53,6 +53,9 @@ public class ConnectionHolder extends ResourceHolderSupport {
 	@Nullable
 	private Connection currentConnection;
 
+	/**
+	 * 当前线程是否存在事务的依据，true为存在
+	 */
 	private boolean transactionActive = false;
 
 	@Nullable
