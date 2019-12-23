@@ -94,7 +94,7 @@ public class AnnotationAwareAspectJAutoProxyCreator extends AspectJAwareAdvisorA
 		 * 在这里调用父类方法加载配置文件中AOP声明
 		 * 其实就是从BeanFactory中找实现了Advisor接口的类
 		 * 比如我们spring的事务注解<tx:annotation-driven transaction-manager="transactionManager"/>
-		 * 就是会注册一个了Advisor类的beanBeanFactoryTransactionAttributeSourceAdvisor
+		 * 就是会注册一个了Advisor类的bean BeanFactoryTransactionAttributeSourceAdvisor
 		 */
 		List<Advisor> advisors = super.findCandidateAdvisors();
 		// Build Advisors for all AspectJ aspects in the bean factory.

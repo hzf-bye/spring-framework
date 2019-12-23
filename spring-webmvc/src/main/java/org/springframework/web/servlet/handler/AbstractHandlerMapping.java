@@ -402,7 +402,7 @@ public abstract class AbstractHandlerMapping extends WebApplicationObjectSupport
 			return null;
 		}
 		// Bean name or resolved handler?
-		//当查找的 controller为 S时ng类型时，那就意味着返回的是配置的 bean名称， 需要根据 bean名称查找对应的 bean
+		//当查找的 controller为 String类型时，那就意味着返回的是配置的 bean名称， 需要根据 bean名称查找对应的 bean
 		if (handler instanceof String) {
 			String handlerName = (String) handler;
 			handler = obtainApplicationContext().getBean(handlerName);

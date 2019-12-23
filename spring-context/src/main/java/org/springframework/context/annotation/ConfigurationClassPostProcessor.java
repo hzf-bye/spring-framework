@@ -322,6 +322,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
 		do {
+			//追踪springboot starter自动化配置到这里。其中这里的candidates为springboot中的启动类
 			parser.parse(candidates);
 			parser.validate();
 

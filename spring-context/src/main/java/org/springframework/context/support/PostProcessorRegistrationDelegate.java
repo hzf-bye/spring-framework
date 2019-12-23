@@ -109,6 +109,11 @@ final class PostProcessorRegistrationDelegate {
 			sortPostProcessors(currentRegistryProcessors, beanFactory);
 			// 加入registryProcessors集合
 			registryProcessors.addAll(currentRegistryProcessors);
+			/*
+			 * 在springboot里会有一个ConfigurationClassPostProcessor是BeanDefinitionRegistryPostProcessor实现
+			 * 通过ConfigurationClassPostProcessor去实现starter自动化配置
+			 * 接下来我们跟踪ConfigurationClassPostProcessor类
+			 */
 			// 调用所有实现了 PriorityOrdered 的 BeanDefinitionRegistryPostProcessors 的 postProcessBeanDefinitionRegistry() 方法
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
 			// 清空，以备下次使用

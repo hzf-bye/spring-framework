@@ -82,7 +82,7 @@ public abstract class NamespaceHandlerSupport implements NamespaceHandler {
 	@Nullable
 	private BeanDefinitionParser findParserForElement(Element element, ParserContext parserContext) {
 
-		//获取元素名称，《spring源码深度解析》书籍中的<myname:user中的user
+		//获取元素名称，比如此时解析的自定义标签是<tx:annotation-driven>那么获取此标签中的annotation-driven
 		String localName = parserContext.getDelegate().getLocalName(element);
 		/*
 		 * 根据user找到对应的解析器,也就是

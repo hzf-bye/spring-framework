@@ -668,6 +668,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 			}
 			// 这里判断是否回滚默认的依据是抛出的异常是否是RuntimeException或者是Error的类型
 			// 或者有没有指定的异常类型需不需要回滚
+			//txInfo.transactionAttribute为RuleBasedTransactionAttribute
 			if (txInfo.transactionAttribute != null && txInfo.transactionAttribute.rollbackOn(ex)) {
 				try {
 					//根据TransactionStatus信息进行回滚

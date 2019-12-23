@@ -255,7 +255,7 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 		 * 1.比如事务的传播特性是PROPAGATION_REQUIRED，
 		 * 	1.1如果从当前线程中获取到了conHolder，因此必须将newConnectionHolder设置为false，标识当前的数据库连接不是新创建的连接
 		 * 	1.2如果从当前线程中没有获取到conHolder，那么此时conHolder为null，在之后的逻辑中必然会创建一个新的ConnectionHolder
-		 * 	  那时候newConnectionHolder会被设置成false，标识新创建的数据库连接
+		 * 	  那时候newConnectionHolder会被设置成true，标识新创建的数据库连接
 		 * 2.比如事务的传播特性是PROPAGATION_REQUIRES_NEW
 		 * 	那么无论此时有没有获取到数据库连接，都会讲此conHolder从当前线程清除，并且保留起来便于后续恢复，
 		 * 	然后之后都会创建一个新的ConnectionHolder，会将newConnectionHolder设置为true，因此这里的赋值无意义

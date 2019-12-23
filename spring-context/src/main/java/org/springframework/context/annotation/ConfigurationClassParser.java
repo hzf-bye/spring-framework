@@ -83,6 +83,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.util.StringUtils;
+import sun.tools.javac.SourceClass;
 
 /**
  * Parses a {@link Configuration} class definition, populating a collection of
@@ -167,6 +168,7 @@ class ConfigurationClassParser {
 			BeanDefinition bd = holder.getBeanDefinition();
 			try {
 				if (bd instanceof AnnotatedBeanDefinition) {
+					//追踪springboot starter自动化配置到这里
 					parse(((AnnotatedBeanDefinition) bd).getMetadata(), holder.getBeanName());
 				}
 				else if (bd instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) bd).hasBeanClass()) {
@@ -217,7 +219,18 @@ class ConfigurationClassParser {
 	}
 
 
+	/**
+	 * 对于某个特定的类的解析
+	 * configClass中如果metadata不为空，那么说明此类为注解定义的类
+	 */
 	protected void processConfigurationClass(ConfigurationClass configClass) throws IOException {
+
+		/*
+		 * 判断此类是否有Conditional相关的注解
+		 * 如ConditionalOnExpression、ConditionalOnProperty、ConditionalOnBean等
+		 * 如果有相关的注解，则判断是否匹配对应的条件，不匹配的话则直接return，
+		 * 即这个类不会初始化，以及这个类对应的ComponentScan之类的配置也不会解析了
+		 */
 		if (this.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) {
 			return;
 		}
@@ -242,6 +255,7 @@ class ConfigurationClassParser {
 		// Recursively process the configuration class and its superclass hierarchy.
 		SourceClass sourceClass = asSourceClass(configClass);
 		do {
+			//追踪springboot starter自动化配置到这里
 			sourceClass = doProcessConfigurationClass(configClass, sourceClass);
 		}
 		while (sourceClass != null);
@@ -256,6 +270,9 @@ class ConfigurationClassParser {
 	 * @param configClass the configuration class being build
 	 * @param sourceClass a source class
 	 * @return the superclass, or {@code null} if none found or previously processed
+	 *
+	 * 如果是springboot starter自动化配置的话
+	 * configClass就是spring.factories中的配置类
 	 */
 	@Nullable
 	protected final SourceClass doProcessConfigurationClass(ConfigurationClass configClass, SourceClass sourceClass)
@@ -286,6 +303,7 @@ class ConfigurationClassParser {
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
 			for (AnnotationAttributes componentScan : componentScans) {
 				// The config class is annotated with @ComponentScan -> perform the scan immediately
+				//解析ComponentScans注解
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
@@ -302,6 +320,7 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @Import annotations
+		//追踪springboot starter自动化配置到这里
 		processImports(configClass, sourceClass, getImports(sourceClass), true);
 
 		// Process any @ImportResource annotations
@@ -566,8 +585,18 @@ class ConfigurationClassParser {
 							this.deferredImportSelectorHandler.handle(configClass, (DeferredImportSelector) selector);
 						}
 						else {
+							//追踪springboot starter自动化配置到这里
+							/*
+							 * 其中会有一个selector为AutoConfigurationImportSelector
+							 * 然后selectImports方法就会解析META-INF/spring.factories文件获取对应的配置类
+							 * 将EnableAutoConfiguration.class.getName()作为key获取HelloServiceAutoConfiguration配置类
+							 * org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+							 * com.spring.study.HelloServiceAutoConfiguration
+							 * 具体详见springboot源码
+							 */
 							String[] importClassNames = selector.selectImports(currentSourceClass.getMetadata());
 							Collection<SourceClass> importSourceClasses = asSourceClasses(importClassNames);
+							//这里递归
 							processImports(configClass, currentSourceClass, importSourceClasses, false);
 						}
 					}
@@ -586,6 +615,7 @@ class ConfigurationClassParser {
 						// process it as an @Configuration class
 						this.importStack.registerImport(
 								currentSourceClass.getMetadata(), candidate.getMetadata().getClassName());
+						//这里就是处理所有META-INF/spring.factories文件获取对应的配置类
 						processConfigurationClass(candidate.asConfigClass(configClass));
 					}
 				}
