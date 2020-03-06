@@ -31,6 +31,9 @@ import org.springframework.util.StringUtils;
 @SuppressWarnings("serial")
 public class DefaultTransactionAttribute extends DefaultTransactionDefinition implements TransactionAttribute {
 
+	/**
+	 * @Transactional注解中的value属性
+	 */
 	@Nullable
 	private String qualifier;
 

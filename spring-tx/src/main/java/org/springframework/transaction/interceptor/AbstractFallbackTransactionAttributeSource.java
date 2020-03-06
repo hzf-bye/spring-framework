@@ -168,6 +168,7 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 
 		// The method may be on an interface, but we need attributes from the target class.
 		// If the target class is null, the method will be unchanged.
+		//如果方法是实现某个接口的，那么获取接口上的方法
 		Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
 
 		// First try is the method in the target class.
@@ -187,7 +188,9 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 
 		//如果存在接口，则到接口中去寻找
 		if (specificMethod != method) {
+
 			// Fallback is to look at the original method.
+			//二者不相等 说明方法来自接口，那么在查找对应的bean中的方法是否存在事务声明
 			txAttr = findTransactionAttribute(method);
 			if (txAttr != null) {
 				return txAttr;

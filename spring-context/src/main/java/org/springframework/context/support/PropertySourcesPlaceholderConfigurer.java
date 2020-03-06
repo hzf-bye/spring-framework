@@ -155,6 +155,7 @@ public class PropertySourcesPlaceholderConfigurer extends PlaceholderConfigurerS
 		}
 
 		processProperties(beanFactory, new PropertySourcesPropertyResolver(this.propertySources));
+		propertySources.get(LOCAL_PROPERTIES_PROPERTY_SOURCE_NAME).getProperty("cache.file");
 		this.appliedPropertySources = this.propertySources;
 	}
 

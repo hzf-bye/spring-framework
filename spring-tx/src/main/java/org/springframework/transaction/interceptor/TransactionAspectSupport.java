@@ -339,9 +339,11 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		// If the transaction attribute is null, the method is non-transactional.
 		// 获取事务对应的属性，
 		TransactionAttributeSource tas = getTransactionAttributeSource();
-		//这里tas不为空为AnnotationTransactionAttributeSource类型，
-		// 且在判断增强是否与对应的类匹配的时候已经将方法对应的增强缓存在attributeCache中了
-		// txArr为RuleBasedTransactionAttribute类型
+		/**
+		 * 这里tas不为空为{@link org.springframework.transaction.annotation.AnnotationTransactionAttributeSource}类型，
+		 * 且在判断增强是否与对应的类匹配的时候已经将方法对应的增强缓存在{@link AbstractFallbackTransactionAttributeSource#attributeCache}中了
+		 * txArr为{@link RuleBasedTransactionAttribute}类型
+		 */
 		final TransactionAttribute txAttr = (tas != null ? tas.getTransactionAttribute(method, targetClass) : null);
 
 		/*
@@ -472,6 +474,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 			return asPlatformTransactionManager(getTransactionManager());
 		}
 
+
 		String qualifier = txAttr.getQualifier();
 		if (StringUtils.hasText(qualifier)) {
 			return determineQualifiedTransactionManager(this.beanFactory, qualifier);
@@ -591,7 +594,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 			}
 		}
 		/*
-		 * 根据指定的属性与status准备一个TransactionInfo
+		 * 根据指定的属性与status（DefaultTransactionStatus实例）准备一个TransactionInfo
 		 *
 		 * 我们需要将所有的事务信息统一记录在TransactionInfo实例中，
 		 * 这个实例包含了目标方法开始前的所有状态信息，一旦事务执行失败，spring就会通过TransactionInfo
@@ -731,6 +734,10 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 
 		private final String joinpointIdentification;
 
+		/**
+		 * 当前事务的状态，
+		 * {@link  org.springframework.transaction.support.DefaultTransactionStatus}
+		 */
 		@Nullable
 		private TransactionStatus transactionStatus;
 

@@ -48,6 +48,9 @@ public abstract class AbstractTransactionStatus implements TransactionStatus {
 
 	private boolean rollbackOnly = false;
 
+	/**
+	 * 标识当前事务是否已经完成
+	 */
 	private boolean completed = false;
 
 	@Nullable

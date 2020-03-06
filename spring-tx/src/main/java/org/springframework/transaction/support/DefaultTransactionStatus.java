@@ -50,13 +50,24 @@ import org.springframework.util.Assert;
  */
 public class DefaultTransactionStatus extends AbstractTransactionStatus {
 
+	/**
+	 * 不为空则为{@link org.springframework.jdbc.datasource.DataSourceTransactionManager.DataSourceTransactionObject}实例
+	 * 代表当前的事务信息
+	 * 若为空则表示当前无事物
+	 */
 	@Nullable
 	private final Object transaction;
 
+	/**
+	 * 表示当前事务是否是新创建的事务
+	 */
 	private final boolean newTransaction;
 
 	private final boolean newSynchronization;
 
+	/**
+	 * 标识是否是只读事务
+	 */
 	private final boolean readOnly;
 
 	private final boolean debug;

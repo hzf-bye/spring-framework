@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.core.NamedThreadLocal;
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 import org.springframework.lang.Nullable;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.util.Assert;
 
 /**
@@ -78,21 +79,49 @@ public abstract class TransactionSynchronizationManager {
 
 	private static final Log logger = LogFactory.getLog(TransactionSynchronizationManager.class);
 
+	/**
+	 * 缓存当前线程的数据库连接
+	 * key DataSource
+	 * value Map<DataSource, ConnectionHolder>
+	 */
 	private static final ThreadLocal<Map<Object, Object>> resources =
 			new NamedThreadLocal<>("Transactional resources");
 
+	/**
+	 * 在创建事务后 缓存当前事务信息时初始化Set
+	 * @see AbstractPlatformTransactionManager#prepareSynchronization(org.springframework.transaction.support.DefaultTransactionStatus, org.springframework.transaction.TransactionDefinition)
+	 */
 	private static final ThreadLocal<Set<TransactionSynchronization>> synchronizations =
 			new NamedThreadLocal<>("Transaction synchronizations");
 
+	/**
+	 * 缓存当前事务名称，可能是以前规则生成
+	 * @see TransactionAspectSupport#methodIdentification(java.lang.reflect.Method, java.lang.Class, org.springframework.transaction.interceptor.TransactionAttribute)
+	 */
 	private static final ThreadLocal<String> currentTransactionName =
 			new NamedThreadLocal<>("Current transaction name");
 
+	/**
+	 * 缓存当前线程的数据库连接是否只读
+	 */
 	private static final ThreadLocal<Boolean> currentTransactionReadOnly =
 			new NamedThreadLocal<>("Current transaction read-only status");
 
+	/**
+	 * 缓存当前数据库连接的隔离级别
+	 * @see org.springframework.transaction.TransactionDefinition#ISOLATION_DEFAULT
+	 * @see org.springframework.transaction.TransactionDefinition#ISOLATION_READ_UNCOMMITTED
+	 * @see org.springframework.transaction.TransactionDefinition#ISOLATION_READ_COMMITTED
+	 * @see org.springframework.transaction.TransactionDefinition#ISOLATION_REPEATABLE_READ
+	 * @see org.springframework.transaction.TransactionDefinition#ISOLATION_SERIALIZABLE
+	 */
 	private static final ThreadLocal<Integer> currentTransactionIsolationLevel =
 			new NamedThreadLocal<>("Current transaction isolation level");
 
+	/**
+	 * 缓存当前是否有事务信息
+	 * @see AbstractPlatformTransactionManager#prepareSynchronization(org.springframework.transaction.support.DefaultTransactionStatus, org.springframework.transaction.TransactionDefinition)
+	 */
 	private static final ThreadLocal<Boolean> actualTransactionActive =
 			new NamedThreadLocal<>("Actual transaction active");
 

@@ -359,6 +359,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 		TransactionDefinition def = (definition != null ? definition : TransactionDefinition.withDefaults());
 
 		//这里其实主要就是调用PlatformTransactionManager的getTransactionf方法来获取TransactionStatus来开启一个事务
+		//返回DataSourceTransactionObject类型
 		Object transaction = doGetTransaction();
 		boolean debugEnabled = logger.isDebugEnabled();
 
@@ -407,7 +408,12 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 				 * 如果是新连接，绑定到当前线程的设置
 				 */
 				doBegin(transaction, def);
-				// 新同步事务的设置，针对于当前线程的设置，主要为了当下个事务要挂起当前事务时可以获取到当前事务的状态，便于回滚时恢复
+				/*
+				 * 新同步事务的设置，针对于当前线程的设置，主要为了当下个事务要挂起当前事务时可以获取到当前事务的状态，便于回滚时恢复
+				 * 在suspend()方法中已经将当前线程的一些数据库相关信息情况并且缓存在suspendedResources中，
+				 * 那么此时将当前新创建的数据库连接相关信息又重新缓存到当前线程中
+				 * 这样当前线程保存的总是最新的数据库连接信息，并且上一次的信息缓存在TransactionStatus中
+				 */
 				prepareSynchronization(status, def);
 				return status;
 			} catch (RuntimeException | Error ex) {
@@ -415,7 +421,13 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 				throw ex;
 			}
 		} else {
-			//剩下的三种PROPAGATION_SUPPORTS、PROPAGATION_NOT_SUPPORTED、PROPAGATION_NEVER非事务中执行
+			/**
+			 * 剩下的三种
+			 * {@link TransactionDefinition#PROPAGATION_SUPPORTS}
+			 * {@link TransactionDefinition#PROPAGATION_NOT_SUPPORTED}
+			 * {@link TransactionDefinition#PROPAGATION_NEVER}
+			 * 非事务中执行
+			 */
 			// Create "empty" transaction: no actual transaction, but potentially synchronization.
 			if ( def.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT && logger.isWarnEnabled() ) {
 				logger.warn("Custom isolation level specified but no actual transaction initiated; " +
@@ -445,7 +457,16 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			if ( debugEnabled ) {
 				logger.debug("Suspending current transaction");
 			}
-			//
+			/*
+			 * 新同步事务的设置，针对于当前线程的设置，主要为了当下个事务要挂起当前事务时可以获取到当前事务的状态，便于回滚时恢复
+			 * 在suspend()方法中已经将当前线程的一些数据库相关信息情况并且缓存在suspendedResources中，
+			 * 那么此时将当前新创建的数据库连接相关信息又重新缓存到当前线程中
+			 */
+			/*
+			 * 先调用suspend方法将当前线程的数据库连接信息清空并且缓存在suspendedResources中，
+			 * 并且再次创建数据库连接后，再将连接信息缓存在当前线程中，
+			 * 这样当前线程保存的总是最新的数据库连接信息，并且上一次的信息缓存在TransactionStatus中
+			 */
 			Object suspendedResources = suspend(transaction);
 			boolean newSynchronization = (getTransactionSynchronization() == SYNCHRONIZATION_ALWAYS);
 			return prepareTransactionStatus(
@@ -458,6 +479,11 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 				logger.debug("Suspending current transaction, creating new transaction with name [" +
 						definition.getName() + "]");
 			}
+			/*
+			 * 先调用suspend方法将当前线程的数据库连接信息清空并且缓存在suspendedResources中，
+			 * 并且再次创建数据库连接后，再将连接信息缓存在当前线程中，
+			 * 这样当前线程保存的总是最新的数据库连接信息，并且上一次的信息缓存在TransactionStatus中
+			 */
 			SuspendedResourcesHolder suspendedResources = suspend(transaction);
 			try {
 				boolean newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);
@@ -559,6 +585,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			TransactionDefinition definition, @Nullable Object transaction, boolean newTransaction,
 			boolean newSynchronization, boolean debug, @Nullable Object suspendedResources) {
 
+		//如果之前没有事务存在那么TransactionSynchronizationManager.isSynchronizationActive()返回false
 		boolean actualNewSynchronization = newSynchronization &&
 				!TransactionSynchronizationManager.isSynchronizationActive();
 		return new DefaultTransactionStatus(
