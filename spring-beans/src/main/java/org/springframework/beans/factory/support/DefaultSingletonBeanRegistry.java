@@ -127,11 +127,19 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 
 	/** Map between dependent bean names: bean name to Set of dependent bean names.
 	 * 保存的是依赖 beanName 之间的映射关系：依赖 beanName - > beanName 的集合
+	 * 比如 beanA 依赖beanB、beanC
+	 * 那么此map中
+	 * key1:beanB value1:beanA
+	 * key2:beanC value2:beanA
 	 * */
 	private final Map<String, Set<String>> dependentBeanMap = new ConcurrentHashMap<>(64);
 
 	/** Map between depending bean names: bean name to Set of bean names for the bean's dependencies.
 	 * 保存的是依赖 beanName 之间的映射关系：beanName - > 依赖 beanName 的集合
+	 * 比如 beanA 依赖beanB、beanC
+	 * 那么此map中
+	 * key1:beanA value1:beanB
+	 * key1:beanA value1:beanC
 	 * */
 	private final Map<String, Set<String>> dependenciesForBeanMap = new ConcurrentHashMap<>(64);
 
@@ -173,6 +181,11 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @param beanName the name of the bean
 	 * @param singletonFactory the factory for the singleton object
 	 */
+	/**
+	 * 将创建好的早期bena通过singletonFactory工厂封装存入singletonObjects中
+	 * @param beanName beanName
+	 * @param singletonFactory 保存bean的工厂类
+	 */
 	protected void addSingletonFactory(String beanName, ObjectFactory<?> singletonFactory) {
 		Assert.notNull(singletonFactory, "Singleton factory must not be null");
 		synchronized (this.singletonObjects) {
@@ -198,6 +211,11 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @param beanName the name of the bean to look for
 	 * @param allowEarlyReference whether early references should be created or not
 	 * @return the registered singleton object, or {@code null} if none found
+	 */
+	/**
+	 *
+	 * @param beanName beanName
+	 * @param allowEarlyReference 是否允许从singletonFactories中获取bean
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
@@ -239,7 +257,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 */
 	public Object getSingleton(String beanName, ObjectFactory<?> singletonFactory) {
 		Assert.notNull(beanName, "Bean name must not be null");
-		// 全局加锁
+		// 全局加锁，单例bean只能一个一个创建
 		synchronized (this.singletonObjects) {
 			// <1> 从缓存中检查一遍
 			// 因为 singleton 模式其实就是复用已经创建的 bean 所以这步骤必须检查
@@ -254,7 +272,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				if (logger.isDebugEnabled()) {
 					logger.debug("Creating shared instance of singleton bean '" + beanName + "'");
 				}
-				// <2> 加载前置处理
+				// <2> 缓存当前创建的beanName
+				////如果缓存中没有beanName则缓存，有则抛出异常
+
 				//将当前bean添加至正在创建的bean当中，如果加入失败说明存在循环依赖，则构造器循环依赖报错
 				/*
 				 * A通过构造器参数B创建A，B通过构造器参数A创建B。即A依赖B,B依赖A
@@ -266,12 +286,13 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				 * 还拿上面的情况举例，只是这时是set方法注入
 				 * 1.当创建A时，先从缓存(getSingleton(beanName))中取，若取到了则直接返回A，若没有取到则创建A(第一次肯定是直接创建A的)，
 				 * 在创建完A后会将A暴露在singletonFactories中，然后再去注入A的属性，此时注入属性B时同样的回去缓存中取，
-				 * 如果取到了那么直接返回，否则创建B, 所以若此时2步骤先创建B，那么1中获取B时就是从缓存中取到了2中创建的B，所以得到的都是一个B
-				 * 反之亦然。而2中在获取A时也是从缓存中获取到了1中创建的A
+				 * 如果取到了那么直接返回，否则创建B, 所以若此时2步骤创建B，那么创建完后，将B暴露在singletonFactories中,
+				 * 发现B又依赖A那么此时就能从缓存中后去到A，因此就不需要再次创建A，循环依赖得以解决。
 				 *
 				 *
 				 * 所以两种循环依赖核心区别就是，
-				 * 构造器循环依赖是在创建bean时必须先行创建依赖的bean，所以就会出现A需要B,B需要A的情况，类似死锁，因此spring只能报错
+				 * 构造器循环依赖是在创建bean时必须先行创建依赖的bean，所以就会出现A需要B,B需要A的情况，类似死锁，因此spring只能报错。
+				 *
 				 * 而set方法循环依赖的话，spring在创建好对象之后，先将自己暴露出来，放入singletonFactories中，然后在去注入自己需要的bean，
 				 * 因此别人可以从缓存中获取到自己，自己也可以从缓存中取到需要注入的bean，而且在将自己暴露在singletonFactories中，与从缓存中取数据，
 				 * 以及在创建bean都是锁住同一个对象(singletonObjects)的，这样就解决了循环依赖。
@@ -309,7 +330,7 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					if (recordSuppressedExceptions) {
 						this.suppressedExceptions = null;
 					}
-					// <4> 加载bean后的后置处理
+					// <4> bean创建完后，移除缓存中当前创建的beanName
 					afterSingletonCreation(beanName);
 				}
 				if (newSingleton) {
@@ -500,6 +521,12 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 		}
 	}
 
+	/**
+	 * 判断是否有循环依赖的bean
+	 * @param beanName 当前需要创建的beanName
+	 * @param dependentBeanName 当前需要创建的beanName所依赖的dependentBeanName，即dependentBeanName需要先于beanName实例化
+	 * @return
+	 */
 	private boolean isDependent(String beanName, String dependentBeanName, @Nullable Set<String> alreadySeen) {
 		// alreadySeen 已经检测的依赖 bean
 		if (alreadySeen != null && alreadySeen.contains(beanName)) {
@@ -507,12 +534,13 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 		}
 		// 获取原始 beanName
 		String canonicalName = canonicalName(beanName);
-		// 获取当前 beanName 的依赖集合
+		// 获取当前 beanName 被依赖的bean的集合
+		// 即 dependentBeans列表中的bean都是依赖于beanName的，
 		Set<String> dependentBeans = this.dependentBeanMap.get(canonicalName);
 		if (dependentBeans == null) {
 			return false;
 		}
-		// 存在，则证明存在已经注册的依赖
+		// 存在，则证明存在已经注册的依赖，则表示有循环依赖
 		if (dependentBeans.contains(dependentBeanName)) {
 			return true;
 		}
@@ -522,6 +550,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 				alreadySeen = new HashSet<>();
 			}
 			// 添加到 alreadySeen 中
+			//来着说明 transitiveDependency依赖于beanName，而beanName又依赖于dependentBeanName
+			//因此递归判断dependentBeanName是否又依赖于transitiveDependency，
+			//如果是那么说明还是循环依赖
 			alreadySeen.add(beanName);
 			if (isDependent(transitiveDependency, dependentBeanName, alreadySeen)) {
 				return true;

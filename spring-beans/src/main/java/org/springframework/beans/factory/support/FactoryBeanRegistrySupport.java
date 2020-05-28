@@ -48,7 +48,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 	 * key:FactoryBean类型的bean对应的beanName
 	 * value:FactoryBean类型的bean所创建出来的bean，即factoryBean.getObject()返回值
 	 * 如果getObject()返回值为null，那么value为NullBean
-	 * getObjectFromFactoryBean方法
+	 * @see FactoryBeanRegistrySupport#getObjectFromFactoryBean(org.springframework.beans.factory.FactoryBean, java.lang.String, boolean)
 	 */
 	private final Map<String, Object> factoryBeanObjectCache = new ConcurrentHashMap<>(16);
 

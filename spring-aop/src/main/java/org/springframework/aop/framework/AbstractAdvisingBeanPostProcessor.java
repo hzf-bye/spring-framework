@@ -68,6 +68,7 @@ public abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSu
 			return bean;
 		}
 
+		//添加advisor
 		if (bean instanceof Advised) {
 			Advised advised = (Advised) bean;
 			if (!advised.isFrozen() && isEligible(AopUtils.getTargetClass(bean))) {
@@ -82,6 +83,7 @@ public abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSu
 			}
 		}
 
+		//判断当前bean是否需要创建代理类
 		if (isEligible(bean, beanName)) {
 			ProxyFactory proxyFactory = prepareProxyFactory(bean, beanName);
 			if (!proxyFactory.isProxyTargetClass()) {

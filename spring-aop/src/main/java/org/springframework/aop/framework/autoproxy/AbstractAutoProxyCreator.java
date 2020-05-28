@@ -46,6 +46,7 @@ import org.springframework.beans.factory.FactoryBean;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostProcessor;
+import org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
@@ -346,7 +347,11 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			 */
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
 			// 判断当前bean是否已经找过代理了（无论是否真的有对应的代理），如果是则不再去找了
-			//getEarlyBeanReference方法会对earlyProxyReferences设置
+			/**
+			 * @see AbstractAutoProxyCreator#getEarlyBeanReference(java.lang.Object, java.lang.String)
+			 * 会对earlyProxyReferences设置
+			 * 即如果前置在getEarlyBeanReference方法中创建过代理类则不再代理了
+			 */
 			if (this.earlyProxyReferences.remove(cacheKey) != bean) {
 				//如果它适合被代理，则需要封装指定bean
 				return wrapIfNecessary(bean, beanName, cacheKey);
@@ -528,7 +533,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		proxyFactory.copyFrom(this);
 
 		/*
-		 * 如果当前设置了不使用Cglib代理目标类，则判断目标类是否设置了preserveTargetClass属性，
+		 * 如果当前设置了不使用Cglib代理目标类，则判断目标类是否设置了ProxyTargetClass属性，
 		 * 如果设置了，则还是强制使用Cglib代理目标类；如果没有设置，则判断目标类是否实现了相关接口，
 		 * 没有设置，则还是使用Cglib代理。需要注意的是Spring默认使用的是Jdk代理来织入切面逻辑。
 		 */

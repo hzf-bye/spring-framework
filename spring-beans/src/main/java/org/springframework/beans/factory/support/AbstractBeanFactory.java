@@ -262,7 +262,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		/*
 		 * 检查缓存中或者示例工厂中是否有对应的示例
 		 * 为什么会首先使用这段代码呢，
-		 * 因为再在创建单例bean的时候会存在依赖注入的情况，而在创建依赖的时候为了避免循环依赖，
+		 * 因为在创建单例bean的时候会存在依赖注入的情况，而在创建依赖的时候为了避免循环依赖，
 		 * spring创建bean的原则是不等bean的创建完成就会将bean的ObjectFactory提早曝光
 		 * 也就是将ObjectFactory加入到缓存中，一旦下个bean创建时候需要依赖上个则直接使用ObjectFactory
 		 */
@@ -293,6 +293,8 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			 * 原型模式下，如果存在A中有属性B，
 			 * B中有A的属性，那么当依赖注入的时候，就会产生当A还未创建完的时候因为
 			 * 对于B的创建再次返回创建A，造成循环依赖，也就是下面的情况
+			 *
+			 * 因为是原型模式，所以当发现A依赖B，那么就创建B，此时发现B依赖A，又去创建A...会无限循环下去，因此不允许原型模式不允许循环依赖
 			 */
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
@@ -408,10 +410,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					//prototype模式创建的(new)
 					Object prototypeInstance = null;
 					try {
+						//创建前，将当前创建的bean放入缓存中，为了判断原型模式下是否会存在循环依赖
 						beforePrototypeCreation(beanName);
 						prototypeInstance = createBean(beanName, mbd, args);
 					}
 					finally {
+						//创建完后，将bean移除
 						afterPrototypeCreation(beanName);
 					}
 					bean = getObjectForBeanInstance(prototypeInstance, name, beanName, mbd);
@@ -1888,9 +1892,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		//现在我们就有了一个 Bean 实例，该实例可能是会是是一个正常的 bean 又或者是一个 FactoryBean
 		//如果是 FactoryBean，我们则创建该 Bean，除非调用者实际上想要引用工厂（FactoryBean）。
 		/*
-		 * 1.如果当前bean不是FactoryBean类型那么直接返回改bean
-		 * 2.如果改bean是FactoryBean类型，那么看name是不是&开头，
-		 * 如果是&开头那么说明就是要获取FactoryBean类型的示例直接返回
+		 * 1.如果当前bean不是FactoryBean类型那么直接返回该bean
+		 * 2.如果该bean是FactoryBean类型，那么看name是不是&开头，
+		 * 如果是&开头那么说明就是要获取FactoryBean类型的实例直接返回
 		 * 	否则继续往下，根据 FactoryBean获取到对应的bean
 		 */
 		if (!(beanInstance instanceof FactoryBean) || BeanFactoryUtils.isFactoryDereference(name)) {

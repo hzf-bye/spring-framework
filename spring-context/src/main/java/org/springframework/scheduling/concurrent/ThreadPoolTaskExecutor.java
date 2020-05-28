@@ -35,6 +35,7 @@ import org.springframework.core.task.TaskDecorator;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.lang.Nullable;
 import org.springframework.scheduling.SchedulingTaskExecutor;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.util.Assert;
 import org.springframework.util.ConcurrentReferenceHashMap;
 import org.springframework.util.concurrent.ListenableFuture;
@@ -91,7 +92,6 @@ public class ThreadPoolTaskExecutor extends ExecutorConfigurationSupport
 	private int keepAliveSeconds = 60;
 
 	private int queueCapacity = Integer.MAX_VALUE;
-
 	private boolean allowCoreThreadTimeOut = false;
 
 	@Nullable

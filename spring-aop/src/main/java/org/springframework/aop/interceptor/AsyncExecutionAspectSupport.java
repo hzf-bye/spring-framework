@@ -161,14 +161,17 @@ public abstract class AsyncExecutionAspectSupport implements BeanFactoryAware {
 	 */
 	@Nullable
 	protected AsyncTaskExecutor determineAsyncExecutor(Method method) {
+		//1.首先从缓存中获取
 		AsyncTaskExecutor executor = this.executors.get(method);
 		if (executor == null) {
 			Executor targetExecutor;
+			//通过子类获取指定beanName的线程池
 			String qualifier = getExecutorQualifier(method);
 			if (StringUtils.hasLength(qualifier)) {
 				targetExecutor = findQualifiedExecutor(this.beanFactory, qualifier);
 			}
 			else {
+				//获取执行的线程池，如果没有则通过getDefaultExecutor获取默认线程池
 				targetExecutor = this.defaultExecutor.get();
 			}
 			if (targetExecutor == null) {
@@ -176,6 +179,7 @@ public abstract class AsyncExecutionAspectSupport implements BeanFactoryAware {
 			}
 			executor = (targetExecutor instanceof AsyncListenableTaskExecutor ?
 					(AsyncListenableTaskExecutor) targetExecutor : new TaskExecutorAdapter(targetExecutor));
+			//缓存获取到的线程池
 			this.executors.put(method, executor);
 		}
 		return executor;
@@ -230,11 +234,15 @@ public abstract class AsyncExecutionAspectSupport implements BeanFactoryAware {
 				// Search for TaskExecutor bean... not plain Executor since that would
 				// match with ScheduledExecutorService as well, which is unusable for
 				// our purposes here. TaskExecutor is more clearly designed for it.
+				//去spring容器中获取TaskExecutor类型的bean，如果获取到唯一的bean那么直接返回
 				return beanFactory.getBean(TaskExecutor.class);
 			}
 			catch (NoUniqueBeanDefinitionException ex) {
 				logger.debug("Could not find unique TaskExecutor bean", ex);
 				try {
+					//如果sping容器中存在多个TaskExecutor类型的bean，那么通过beanName taskExecutor去获取
+					//Executor类型的bean
+					//如果获取到了返回
 					return beanFactory.getBean(DEFAULT_TASK_EXECUTOR_BEAN_NAME, Executor.class);
 				}
 				catch (NoSuchBeanDefinitionException ex2) {
@@ -248,6 +256,9 @@ public abstract class AsyncExecutionAspectSupport implements BeanFactoryAware {
 			catch (NoSuchBeanDefinitionException ex) {
 				logger.debug("Could not find default TaskExecutor bean", ex);
 				try {
+					//如果sping容器中不存在TaskExecutor类型的bean，那么通过beanName taskExecutor去获取
+					//Executor类型的bean
+					//如果获取到了返回
 					return beanFactory.getBean(DEFAULT_TASK_EXECUTOR_BEAN_NAME, Executor.class);
 				}
 				catch (NoSuchBeanDefinitionException ex2) {

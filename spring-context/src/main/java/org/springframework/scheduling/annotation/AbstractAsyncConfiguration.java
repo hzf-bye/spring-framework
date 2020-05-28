@@ -64,6 +64,8 @@ public abstract class AbstractAsyncConfiguration implements ImportAware {
 
 	/**
 	 * Collect any {@link AsyncConfigurer} beans through autowiring.
+	 * 这里回去spring中获取自定义的配置，即AsyncConfigurer类型bean
+	 * 该bean中可以自定义异步执行的线程池，以及异常处理器
 	 */
 	@Autowired(required = false)
 	void setConfigurers(Collection<AsyncConfigurer> configurers) {

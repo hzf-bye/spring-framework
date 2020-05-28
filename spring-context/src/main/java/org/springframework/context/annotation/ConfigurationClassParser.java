@@ -65,10 +65,7 @@ import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertySource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
-import org.springframework.core.io.support.DefaultPropertySourceFactory;
-import org.springframework.core.io.support.EncodedResource;
-import org.springframework.core.io.support.PropertySourceFactory;
-import org.springframework.core.io.support.ResourcePropertySource;
+import org.springframework.core.io.support.*;
 import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.MethodMetadata;
 import org.springframework.core.type.StandardAnnotationMetadata;
@@ -335,6 +332,7 @@ class ConfigurationClassParser {
 			}
 		}
 
+		//处理类中的@Bean注解修饰的方法，
 		// Process individual @Bean methods
 		Set<MethodMetadata> beanMethods = retrieveBeanMethodMetadata(sourceClass);
 		for (MethodMetadata methodMetadata : beanMethods) {
@@ -586,13 +584,15 @@ class ConfigurationClassParser {
 						}
 						else {
 							//追踪springboot starter自动化配置到这里
-							/*
+							/**
 							 * 其中会有一个selector为AutoConfigurationImportSelector
 							 * 然后selectImports方法就会解析META-INF/spring.factories文件获取对应的配置类
 							 * 将EnableAutoConfiguration.class.getName()作为key获取HelloServiceAutoConfiguration配置类
 							 * org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
 							 * com.spring.study.HelloServiceAutoConfiguration
 							 * 具体详见springboot源码
+							 * {@link SpringFactoriesLoader#loadFactories(java.lang.Class, java.lang.ClassLoader)}
+							 * 最终在此加载对应的配置类
 							 */
 							String[] importClassNames = selector.selectImports(currentSourceClass.getMetadata());
 							Collection<SourceClass> importSourceClasses = asSourceClasses(importClassNames);

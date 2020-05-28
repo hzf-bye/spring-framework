@@ -100,18 +100,23 @@ public class AsyncExecutionInterceptor extends AsyncExecutionAspectSupport imple
 	@Override
 	@Nullable
 	public Object invoke(final MethodInvocation invocation) throws Throwable {
+		//获取目标类class对称
 		Class<?> targetClass = (invocation.getThis() != null ? AopUtils.getTargetClass(invocation.getThis()) : null);
+		//获取目标方法
 		Method specificMethod = ClassUtils.getMostSpecificMethod(invocation.getMethod(), targetClass);
 		final Method userDeclaredMethod = BridgeMethodResolver.findBridgedMethod(specificMethod);
 
+		//获取异步执行的线程池
 		AsyncTaskExecutor executor = determineAsyncExecutor(userDeclaredMethod);
 		if (executor == null) {
 			throw new IllegalStateException(
 					"No executor specified and no default executor set on AsyncExecutionInterceptor either");
 		}
 
+		//创建Callable异步线程任务
 		Callable<Object> task = () -> {
 			try {
+				//这里会执行后续的调用链，最终通过反射调用目标方法
 				Object result = invocation.proceed();
 				if (result instanceof Future) {
 					return ((Future<?>) result).get();
@@ -126,6 +131,7 @@ public class AsyncExecutionInterceptor extends AsyncExecutionAspectSupport imple
 			return null;
 		};
 
+		//将任务提交给线程池异步执行
 		return doSubmit(task, executor, invocation.getMethod().getReturnType());
 	}
 

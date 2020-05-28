@@ -216,7 +216,16 @@ public class InitDestroyAnnotationBeanPostProcessor
 		return metadata;
 	}
 
+	/**
+	 * 输入一个类，检查它或者它的祖先类是否有初始化方法以及销毁方法，如果有，把这些信息封装成一个LifecycleMetadata类，
+	 * 里面大概信息就是类名、初始化和销毁方法列表，方便bean注册或消亡的时候去调用。
+	 */
 	private LifecycleMetadata buildLifecycleMetadata(final Class<?> clazz) {
+		/**
+		 * initAnnotationType与destroyAnnotationType见
+		 * @see org.springframework.context.annotation.CommonAnnotationBeanPostProcessor#CommonAnnotationBeanPostProcessor()
+		 * 的构造方法
+ 		 */
 		if (!AnnotationUtils.isCandidateClass(clazz, Arrays.asList(this.initAnnotationType, this.destroyAnnotationType))) {
 			return this.emptyLifecycleMetadata;
 		}
@@ -230,13 +239,17 @@ public class InitDestroyAnnotationBeanPostProcessor
 			final List<LifecycleElement> currDestroyMethods = new ArrayList<>();
 
 			ReflectionUtils.doWithLocalMethods(targetClass, method -> {
+				//判断targetClass中的所有方法是否有initAnnotationType类型的注解
 				if (this.initAnnotationType != null && method.isAnnotationPresent(this.initAnnotationType)) {
+					//说当前方法被initAnnotationType注解修饰
+					//LifecycleElement中判断当前method方法不允许有参数
 					LifecycleElement element = new LifecycleElement(method);
 					currInitMethods.add(element);
 					if (logger.isTraceEnabled()) {
 						logger.trace("Found init method on class [" + clazz.getName() + "]: " + method);
 					}
 				}
+				//判断targetClass中的所有方法是否有destroyAnnotationType类型的注解
 				if (this.destroyAnnotationType != null && method.isAnnotationPresent(this.destroyAnnotationType)) {
 					currDestroyMethods.add(new LifecycleElement(method));
 					if (logger.isTraceEnabled()) {
@@ -247,6 +260,7 @@ public class InitDestroyAnnotationBeanPostProcessor
 
 			initMethods.addAll(0, currInitMethods);
 			destroyMethods.addAll(currDestroyMethods);
+			//获取父类，继续判断
 			targetClass = targetClass.getSuperclass();
 		}
 		while (targetClass != null && targetClass != Object.class);
@@ -295,6 +309,7 @@ public class InitDestroyAnnotationBeanPostProcessor
 		}
 
 		public void checkConfigMembers(RootBeanDefinition beanDefinition) {
+			//这里initMethods被封装成LinkedHashSet，说明若一个类某个方法与其父类对应的方法都被@PostConstruct注解修饰，那么只会被执行一次
 			Set<LifecycleElement> checkedInitMethods = new LinkedHashSet<>(this.initMethods.size());
 			for (LifecycleElement element : this.initMethods) {
 				String methodIdentifier = element.getIdentifier();

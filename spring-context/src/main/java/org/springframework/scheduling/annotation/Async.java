@@ -66,6 +66,9 @@ public @interface Async {
 	 * given executor should be used for all methods within the class. Method-level use
 	 * of {@code Async#value} always overrides any value set at the class level.
 	 * @since 3.1.2
+	 *
+	 * 可以匹配自定义的任务执行器-->Executor类型或者TaskExecutor类型的bean
+	 * 在方法上的设置会覆盖在类上的设置
 	 */
 	String value() default "";
 

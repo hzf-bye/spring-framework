@@ -38,7 +38,10 @@ import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.core.OrderComparator;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
+import org.springframework.core.annotation.Order;
 import org.springframework.lang.Nullable;
+
+import javax.annotation.Priority;
 
 /**
  * Delegate for AbstractApplicationContext's post-processor handling.
@@ -96,7 +99,7 @@ final class PostProcessorRegistrationDelegate {
 			List<BeanDefinitionRegistryPostProcessor> currentRegistryProcessors = new ArrayList<>();
 
 			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
-			// 首先处理实现了 PriorityOrdered (有限排序接口)的 BeanDefinitionRegistryPostProcessor
+			// 首先处理实现了 PriorityOrdered (优先排序接口)的 BeanDefinitionRegistryPostProcessor
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
@@ -110,7 +113,7 @@ final class PostProcessorRegistrationDelegate {
 			// 加入registryProcessors集合
 			registryProcessors.addAll(currentRegistryProcessors);
 			/*
-			 * 在springboot里会有一个ConfigurationClassPostProcessor是BeanDefinitionRegistryPostProcessor实现
+			 * 在springboot里会有一个ConfigurationClassPostProcessor是BeanDefinitionRegistryPostProcessor实现类
 			 * 通过ConfigurationClassPostProcessor去实现starter自动化配置
 			 * 接下来我们跟踪ConfigurationClassPostProcessor类
 			 */

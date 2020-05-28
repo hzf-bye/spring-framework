@@ -26,6 +26,7 @@ import org.apache.commons.logging.LogFactory;
 import org.springframework.aop.framework.autoproxy.AbstractBeanFactoryAwareAdvisingPostProcessor;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -142,10 +143,19 @@ public class AsyncAnnotationBeanPostProcessor extends AbstractBeanFactoryAwareAd
 	}
 
 
+	/**
+	 * 因为当前bean实现了BeanFactoryAware接口在bean创建完后，在做初始化工作的时候 会调用此方法
+	 * @see AbstractAutowireCapableBeanFactory#initializeBean(java.lang.String, java.lang.Object, org.springframework.beans.factory.support.RootBeanDefinition)
+	 * @see AbstractAutowireCapableBeanFactory#invokeAwareMethods(java.lang.String, java.lang.Object)
+	 */
+
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) {
 		super.setBeanFactory(beanFactory);
-
+		/*
+		 * 创建AsyncAnnotationAdvisor类型的bean，这个bean实现了
+		 * advisor接口，实际上就是封装了当前需要织入的切面的所有所需的属性
+		 */
 		AsyncAnnotationAdvisor advisor = new AsyncAnnotationAdvisor(this.executor, this.exceptionHandler);
 		if (this.asyncAnnotationType != null) {
 			advisor.setAsyncAnnotationType(this.asyncAnnotationType);

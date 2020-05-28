@@ -527,7 +527,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
-			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
+			// 2 return a proxy instead of the target bean instance.
 			// <3> 实例化的前置处理
 			// 给 BeanPostProcessors 一个机会用来返回一个代理类而不是真正的类实例
 			// AOP 的功能就是基于这个地方
@@ -684,10 +684,15 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					exposedObject = earlySingletonReference;
 				}
 				else if (!this.allowRawInjectionDespiteWrapping && hasDependentBean(beanName)) {
-					/*
+					/**
 					 * 如果来到这里说明bean即假设中的A在initializeBean方法中被代理了
-					 * 获取当前bean所依赖的bean
+					 * 且在循环依赖的前提下 代理类必然不是 SmartInstantiationAwareBeanPostProcessor的子类创建的，因为如果存在循环依赖
+					 * 代理类已在{@link AbstractAutowireCapableBeanFactory#getEarlyBeanReference(java.lang.String, org.springframework.beans.factory.support.RootBeanDefinition, java.lang.Object)
+					 * }中被SmartInstantiationAwareBeanPostProcessor的子类创建，那么在initializeBean方法中
+					 * 就不会重复创建了
+					 * @see org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator#postProcessAfterInitialization(java.lang.Object, java.lang.String)
 					 */
+					//获取所依赖当前beanName 的 所有bean
 					String[] dependentBeans = getDependentBeans(beanName);
 					Set<String> actualDependentBeans = new LinkedHashSet<>(dependentBeans.length);
 					/*
@@ -700,18 +705,13 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					 * 那肯定就有问题(说明不是最终的)。
 					 * 所以最终会被加入到actualDependentBeans里面去
 					 */
-
 					for (String dependentBean : dependentBeans) {
 						//检测依赖
 						if (!removeSingletonIfCreatedForTypeCheckOnly(dependentBean)) {
 							actualDependentBeans.add(dependentBean);
 						}
 					}
-					/*
-					 * 因为bean创建后其所依赖的bean一定是已经创建的，
-					 * actualDependentBeans不为空则表示当前bean创建后其所依赖的bean却没有全部创建完，
-					 * 也就是说存在循环依赖
-					 */
+
 					if (!actualDependentBeans.isEmpty()) {
 						throw new BeanCurrentlyInCreationException(beanName,
 								"Bean with name '" + beanName + "' has been injected into other beans [" +
@@ -1600,6 +1600,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
 					InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
 					// 对所有需要依赖检查的属性进行后处理
+					// CommonAnnotationBeanPostProcessor对@Resource直接的处理
+					// AutowiredAnnotationBeanPostProcessor对@Autowired注解的处理
 					PropertyValues pvsToUse = ibp.postProcessProperties(pvs, bw.getWrappedInstance(), beanName);
 					if (pvsToUse == null) {
 						// 从 bw 对象中提取 PropertyDescriptor 结果集
@@ -2026,6 +2028,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		Object wrappedBean = bean;
 		if (mbd == null || !mbd.isSynthetic()) {
 			// <2> 应用后处理器，before
+			// 这里 CommonAnnotationBeanPostProcessor 会执行@PostConstruct注解修饰的方法
 			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
 		}
 
