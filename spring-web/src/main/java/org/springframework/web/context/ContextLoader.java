@@ -373,7 +373,7 @@ public class ContextLoader {
 			}
 		}
 		else {
-			//上面静态代码块中会初始化defaultStrategies
+			//详见上面静态代码块中会初始化defaultStrategies
 			//WebApplicationContext.class.getName()值为org.springframework.web.context.WebApplicationContext
 			//因此contextClassName=org.springframework.web.context.support.XmlWebApplicationContext
 			contextClassName = defaultStrategies.getProperty(WebApplicationContext.class.getName());
@@ -404,7 +404,6 @@ public class ContextLoader {
 
 		wac.setServletContext(sc);
 		//获取contextConfigLocation属性值，对应的value指明了spring的配置文件
-		//
 		String configLocationParam = sc.getInitParameter(CONFIG_LOCATION_PARAM);
 		if (configLocationParam != null) {
 			wac.setConfigLocation(configLocationParam);

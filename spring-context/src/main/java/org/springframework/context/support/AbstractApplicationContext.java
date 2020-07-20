@@ -537,7 +537,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				postProcessBeanFactory(beanFactory);
 
 				// Invoke factory processors registered as beans in the context.
-				// 激活各种BeanFactory处理器
+				// 激活各种BeanFactory处理器，BeanFactoryPostProcessor
 				// springboot starter自动配置原理也是在这里面实现的
 				//
 				invokeBeanFactoryPostProcessors(beanFactory);
@@ -726,6 +726,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// 添加ApplicationContextAwareProcessor
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
 
+		//因为有了ApplicationContextAwareProcessor，所以会自动出入下面的Aware bean，
+		// 因此需要在spring做bean的依赖注入的时候忽略他们，ignoreDependencyInterface作用正式如此。
 		// 设置忽略自动装配的接口
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
 		beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);

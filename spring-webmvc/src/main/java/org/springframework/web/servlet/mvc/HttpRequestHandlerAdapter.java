@@ -37,6 +37,9 @@ import org.springframework.web.servlet.ModelAndView;
  * @see org.springframework.web.HttpRequestHandler
  * @see LastModified
  * @see SimpleControllerHandlerAdapter
+ * HTTP 请求处理器适配器( HttpRequestHandlerAdapter )。
+ * HTTP请求处理器适配器仅仅支持对 HTTP请求处理器的适配。 它简单地将 HTTP请求对
+ * 象和响应对象传递给HTTP请求处理器的实现，它并不需要返回值。 它主要应用在基于HTTP 的远程调用的实现上 。
  */
 public class HttpRequestHandlerAdapter implements HandlerAdapter {
 

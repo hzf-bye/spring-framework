@@ -36,6 +36,10 @@ import org.springframework.web.servlet.ModelAndView;
  * @see Controller
  * @see LastModified
  * @see HttpRequestHandlerAdapter
+ * 简单控制器处理器适配器( SimpleControllerHandlerAdapter )。
+ * 这个实现类将 HTTP请求适配到一个控制器的实现进行处理。 这里控制器的实现是一个简
+ * 单的控制器接口的实现 。简单控制器处理器适配器被设计成一个框架类 的实现 ，不需要被改写，
+ * 客户化的业务逻辑通常是在控制器接口的实现类中实现的。
  */
 public class SimpleControllerHandlerAdapter implements HandlerAdapter {
 

@@ -292,7 +292,7 @@ class ConstructorResolver {
 					argsHolder = new ArgumentsHolder(explicitArgs);
 				}
 
-				// isLenientConstructorResolution 判断解析构造函数的时候是否以宽松模式还是严格模式，默认为宽松模式
+				// isLenientConstructorResolution 判断解析构造函数的时候是否以宽松模式还是严格模式，默认true为宽松模式
 				// 严格模式：解析构造函数时，必须所有的都需要匹配，否则抛出异常
 				// 宽松模式：使用具有"最接近的模式"进行匹配
 				// typeDiffWeight：类型差异权重

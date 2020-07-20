@@ -216,6 +216,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 *
 	 * @param beanName beanName
 	 * @param allowEarlyReference 是否允许从singletonFactories中获取bean
+	 * 当某个bean正在创建时，通过getSingleton(beanName, false) 可以判断是否存在循环依赖，若返回不空则说明存在循环依赖。
+	 *
 	 */
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {

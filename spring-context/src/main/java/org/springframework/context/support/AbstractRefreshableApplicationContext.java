@@ -230,7 +230,7 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	 */
 	protected void customizeBeanFactory(DefaultListableBeanFactory beanFactory) {
 		//如果属性allowBeanDefinitionOverriding不为空，设置给beanFactory
-		//此属性含义：是否覆盖同名称的不同定义的对象
+		//此属性含义：是否允许覆盖同名称的不同定义的对象
 		if (this.allowBeanDefinitionOverriding != null) {
 			beanFactory.setAllowBeanDefinitionOverriding(this.allowBeanDefinitionOverriding);
 		}

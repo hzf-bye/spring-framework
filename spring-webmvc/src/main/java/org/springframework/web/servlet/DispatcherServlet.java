@@ -320,7 +320,7 @@ public class DispatcherServlet extends FrameworkServlet {
 	/**
 	 * 获取注册的所有的HandlerAdapter类的标志
 	 * <init-param>
-	 * <param- name>detectAllHandlerAdapters</param- name>
+	 * <param-name>detectAllHandlerAdapters</param- name>
 	 * <param-value>false</param- value>
 	 * </<init-param>>
 	 */
@@ -602,12 +602,11 @@ public class DispatcherServlet extends FrameworkServlet {
 	 */
 	/**
 	 * 1. 基于 URL参数的配置。
-	 * 通过 URL参数来控制国际化， 比如你在页面上加一句<a href=”?locale=zh CN”>简体中文
+	 * 通过 URL参数来控制国际化， 比如你在页面上加一句<a href=”?locale=zh_CN”>简体中文
 	 * </a>来控制项目中使用的国际化参数 。 而提供这个功能的就是 AcceptHeaderLocaleResolver， 默
 	 * 认的参数名为 local巳，注意大小写。 里面放的就是你的提交参数，比如 en US, zh CN之类的，
 	 * 具体配置如下;
-	 * <bean id=”localeResolver” class=”org.Springframework.web.servlet.il8n. AcceptHeader Lo
-	 * caleResolver”/>
+	 * <bean id=”localeResolver” class=”org.springframework.web.servlet.i18n.AcceptHeaderLocaleResolver”/>
 	 *
 	 */
 	/**
@@ -1246,7 +1245,7 @@ public class DispatcherServlet extends FrameworkServlet {
 				 *
 				 * Spring提供的对 Last-Modified机制的支持，只需要实现 LastModified接口，如下所示 :
 				 *
-				 * public cl ass HelloWorldLastModifiedCacheController extends AbstractController i mplemen ts LastModified {
+				 * public class HelloWorldLastModifiedCacheController extends AbstractController implements LastModified {
 				 *
 				 *		private long lastModified ;
 				 * 		protected ModelAndView handleRequestinternal(HttpServletRequest req , HttpServletResponse resp) throws Exception {
