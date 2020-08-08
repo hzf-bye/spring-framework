@@ -313,6 +313,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					return ((AbstractBeanFactory) parentBeanFactory).doGetBean(
 							nameToLookup, requiredType, args, typeCheckOnly);
 				}
+				
 				//递归到beanFactory中寻找
 				else if (args != null) {
 					// 委托给构造函数 getBean() 处理
@@ -328,6 +329,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					return (T) parentBeanFactory.getBean(nameToLookup);
 				}
 			}
+
 
 			//如果不是仅仅做类型检查则是创建bean，这里要进行记录
 			if (!typeCheckOnly) {
