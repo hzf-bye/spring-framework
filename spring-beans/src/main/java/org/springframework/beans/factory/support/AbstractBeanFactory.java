@@ -336,6 +336,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				markBeanAsCreated(beanName);
 			}
 
+
 			try {
 				/*
 				 * 将存储XML配置文件的GenericBeanDefinition转化为RootBeanDefinition，如果指定
